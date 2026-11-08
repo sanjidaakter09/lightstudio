@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Light Studio | Image Editor</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+
+<body>
+
+<div class="app-container">
+
+    <!-- LEFT SIDEBAR -->
+
+    <aside class="sidebar">
+
+        <div class="brand">
+
+            <span class="brand-icon">✦</span>
+
+            <span>Light <strong>Studio</strong></span>
+
+        </div>
+
+        <div class="sidebar-label">WORKSPACE</div>
+
+        <button class="nav-item active" data-section="home">
+
+            <span>⌂</span> Home
+
+        </button>
+
+        <button class="nav-item" data-section="adjustments">
+
+            <span>☷</span> Adjustments
+
+        </button>
+
+        <button class="nav-item" data-section="effects">
+
+            <span>✧</span> Effects
+
+        </button>
+
+        <div class="sidebar-divider"></div>
+
+        <div class="sidebar-label">INFORMATION</div>
+
+        <button class="nav-item" data-section="about">
+
+            <span>ⓘ</span> About
+
+        </button>
+
+        <div class="sidebar-footer">
+
+            <div class="status-dot"></div>
+
+            <span>Image Editor</span>
+
+            <span class="version">v1.0</span>
+
+        </div>
+
+    </aside>
+
+    <!-- MAIN APPLICATION -->
+
+    <main class="main-content">
+
+        <!-- TOP TOOLBAR -->
+
+        <header class="topbar">
+
+            <div class="page-heading">
+
+                <h1 id="pageTitle">Image Workspace</h1>
+
+                <p id="pageSubtitle">Upload an image and start editing.</p>
+
+            </div>
+
+            <div class="topbar-actions">
+
+                <label for="imageUpload" class="button button-secondary upload-button">
+
+                    <span>＋</span> Upload Image
+
+                </label>
+
+                <input
+
+                    type="file"
+
+                    id="imageUpload"
+
+                    accept="image/jpeg,image/png,image/webp"
+
+                    hidden
+
+                >
+
+                <button id="resetAllEdits" class="button button-secondary" type="button">
+
+                    Reset All
+
+                </button>
+
+                <button id="downloadButton" class="button button-primary" type="button">
+
+                    ↓ Download
+
+                </button>
+
+            </div>
+
+        </header>
+
+        <!-- EDITOR LAYOUT -->
+
+        <div class="editor-layout">
+
+            <!-- IMAGE WORKSPACE -->
+
+            <section class="workspace">
+
+                <div class="workspace-toolbar">
+
+                    <div class="workspace-title">
+
+                        <span class="workspace-indicator"></span>
+
+                        Canvas
+
+                    </div>
+
+                    <span id="imageDimensions" class="image-dimensions">
+
+                        No image loaded
+
+                    </span>
+
+                </div>
+
+                <div class="image-stage" id="imageContainer">
+
+                    <div class="upload-placeholder" id="uploadPlaceholder">
+
+                        <div class="upload-icon">↑</div>
+
+                        <h2>Bring your image to life</h2>
+
+                        <p>Upload an image to begin editing.</p>
+
+                        <label for="imageUpload" class="button button-primary placeholder-button">
+
+                            Choose an Image
+
+                        </label>
+
+                        <span class="supported-formats">
+
+                            Supports JPG, PNG and WebP
+
+                        </span>
+
+                    </div>
+
+                    <img
+
+                        id="imagePreview"
+
+                        src=""
+
+                        alt="Image preview"
+
+                        hidden
+
+                    >
+
+                </div>
+
+                <div class="workspace-footer">
+
+                    <span id="workspaceStatus">Ready to edit</span>
+
+                    <span>Light Studio Editor</span>
+
+                </div>
+
+            </section>
+
+            <!-- RIGHT EDITING PANEL -->
+
+            <aside class="properties-panel">
+
+                <div class="panel-heading">
+
+                    <div>
+
+                        <h2 id="panelTitle">Adjustments</h2>
+
+                        <p id="panelSubtitle">Fine-tune your image</p>
+
+                    </div>
+
+                    <span class="panel-icon">✦</span>
+
+                </div>
+
+                <!-- HOME PANEL -->
+
+                <section class="tool-section" id="homePanel" hidden>
+
+                    <div class="section-heading">GET STARTED</div>
+
+                    <div class="welcome-card">
+
+                        <div class="welcome-icon">✦</div>
+
+                        <h3>Welcome to Light Studio</h3>
+
+                        <p>Make simple image adjustments in one convenient workspace.</p>
+
+                    </div>
+
+                    <div class="section-heading">QUICK ACTIONS</div>
+
+                    <button class="quick-action" data-open-tool="adjustments">
+
+                        <span class="quick-action-icon">☷</span>
+
+                        <span>
+
+                            <strong>Adjustments</strong>
+
+                            <small>Brightness, contrast, blur and sharpness</small>
+
+                        </span>
+
+                        <span class="action-arrow">›</span>
+
+                    </button>
+
+                    <button class="quick-action" data-open-tool="effects">
+
+                        <span class="quick-action-icon">✧</span>
+
+                        <span>
+
+                            <strong>Image Effects</strong>
+
+                            <small>Grayscale effect</small>
+
+                        </span>
+
+                        <span class="action-arrow">›</span>
+
+                    </button>
+
+                    <div class="info-note">
+
+                        Upload an image first, then choose an editing tool.
+
+                    </div>
+
+                </section>
+
+                <!-- ADJUSTMENTS PANEL -->
+
+                <section class="tool-section" id="adjustmentPanel">
+
+                    <div class="section-heading">LIGHT & COLOR</div>
+
+                    <div class="control-card" id="brightnessControl">
+
+                        <div class="control-heading">
+
+                            <label for="brightness">Brightness</label>
+
+                            <span class="value-badge" id="brightnessValue">100%</span>
+
+                        </div>
+
+                        <input
+
+                            type="range"
+
+                            id="brightness"
+
+                            min="0"
+
+                            max="200"
+
+                            value="100"
+
+                        >
+
+                        <div class="range-labels">
+
+                            <span>Darker</span>
+
+                            <span>Brighter</span>
+
+                        </div>
+
+                        <button class="text-button" id="resetBrightness" type="button">
+
+                            Reset brightness
+
+                        </button>
+
+                    </div>
+
+                    <div class="control-card" id="contrastControl">
+
+                        <div class="control-heading">
+
+                            <label for="contrast">Contrast</label>
+
+                            <span class="value-badge" id="contrastValue">100%</span>
+
+                        </div>
+
+                        <input
+
+                            type="range"
+
+                            id="contrast"
+
+                            min="0"
+
+                            max="200"
+
+                            value="100"
+
+                        >
+
+                        <div class="range-labels">
+
+                            <span>Lower</span>
+
+                            <span>Higher</span>
+
+                        </div>
+
+                        <button class="text-button" id="resetContrast" type="button">
+
+                            Reset contrast
+
+                        </button>
+
+                    </div>
+
+                    <div class="control-card" id="blurControl">
+
+                        <div class="control-heading">
+
+                            <label for="blur">Blur</label>
+
+                            <span class="value-badge" id="blurValue">0</span>
+
+                        </div>
+
+                        <input
+
+                            type="range"
+
+                            id="blur"
+
+                            min="0"
+
+                            max="10"
+
+                            value="0"
+
+                            step="0.5"
+
+                        >
+
+                        <div class="range-labels">
+
+                            <span>Clear</span>
+
+                            <span>Soft</span>
+
+                        </div>
+
+                        <button class="text-button" id="resetBlur" type="button">
+
+                            Reset blur
+
+                        </button>
+
+                    </div>
+
+<div class="control-card" id="sharpenControl">
+
+                        <div class="control-heading">
+
+                            <label for="sharpen">Sharpness</label>
+
+                            <span class="value-badge" id="sharpenValue">1.0</span>
+
+                        </div>
+
+                        <input
+
+                            type="range"
+
+                            id="sharpen"
+
+                            min="0"
+
+                            max="5"
+
+                            value="1"
+
+                            step="0.1"
+
+                        >
+
+                        <div class="range-labels">
+
+                            <span>Softer</span>
+
+                            <span>Sharper</span>
+
+                        </div>
+
+                        <button class="text-button" id="resetSharpen" type="button">
+
+                            Reset sharpness
+
+                        </button>
+
+                        <p id="sharpenStatus" class="status-message"></p>
+
+                    </div>
+
+<div class="info-note">
+
+                        Adjust the sliders to change how your image looks.
+
+                    </div>
+
+                </section>
+
+                <!-- EFFECTS PANEL -->
+
+                <section class="tool-section" id="effectsPanel" hidden>
+
+                    <div class="section-heading">IMAGE EFFECTS</div>
+
+                    <div class="control-card" id="grayscaleControl">
+
+                        <div class="control-heading">
+
+                            <div>
+
+                                <label>Grayscale</label>
+
+                                <p class="control-description">Remove image colors</p>
+
+                            </div>
+
+                            <span class="effect-symbol">◐</span>
+
+                        </div>
+
+                        <button class="button button-secondary full-width" id="grayscaleButton" type="button">
+
+                            Enable Grayscale
+
+                        </button>
+
+                        <button class="text-button" id="resetFilters" type="button">
+
+                            Reset grayscale
+
+                        </button>
+
+                    </div>
+
+                        <div class="info-note">
+
+                        Use grayscale to remove image colors.
+
+                    </div>
+
+                </section>
+
+                <!-- ABOUT PANEL -->
+
+                <section class="tool-section" id="aboutPanel" hidden>
+
+                    <div class="welcome-card">
+
+                        <div class="welcome-icon">✦</div>
+
+                        <h3>About Light Studio</h3>
+
+                        <p>A simple web-based image editing application built with Python, Flask, HTML, CSS and JavaScript.</p>
+
+                    </div>
+
+                    <div class="section-heading">CURRENT FEATURES</div>
+
+                    <div class="feature-list">
+
+                        <div>✓ Image upload and preview</div>
+
+                        <div>✓ Brightness adjustment</div>
+
+                        <div>✓ Contrast adjustment</div>
+
+                        <div>✓ Grayscale effect</div>
+
+                        <div>✓ Blur effect</div>
+
+                        <div>✓ Sharpness adjustment</div>
+
+                        <div>✓ Image download</div>
+
+                    </div>
+
+                </section>
+
+                <!-- DOWNLOAD STATUS -->
+
+                <div class="panel-bottom-status" id="downloadStatus" role="status"></div>
+
+            </aside>
+
+        </div>
+
+    </main>
+
+</div>
+
+<script>
+
+    const imageUpload = document.getElementById("imageUpload");
+
+    const imagePreview = document.getElementById("imagePreview");
+
+    const imageContainer = document.getElementById("imageContainer");
+
+    const uploadPlaceholder = document.getElementById("uploadPlaceholder");
+
+    const brightness = document.getElementById("brightness");
+
+    const contrast = document.getElementById("contrast");
+
+    const blur = document.getElementById("blur");
+
+    const sharpen = document.getElementById("sharpen");
+
+    const brightnessValue = document.getElementById("brightnessValue");
+
+    const contrastValue = document.getElementById("contrastValue");
+
+    const blurValue = document.getElementById("blurValue");
+
+    const sharpenValue = document.getElementById("sharpenValue");
+
+    const grayscaleButton = document.getElementById("grayscaleButton");
+
+    const resetAllEdits = document.getElementById("resetAllEdits");
+
+    const downloadButton = document.getElementById("downloadButton");
+
+    const downloadStatus = document.getElementById("downloadStatus");
+
+    const workspaceStatus = document.getElementById("workspaceStatus");
+
+    const imageDimensions = document.getElementById("imageDimensions");
+
+    const sharpenStatus = document.getElementById("sharpenStatus");
+
+    let originalImageFile = null;
+
+    let originalImageUrl = null;
+
+    let grayscaleEnabled = false;
+
+    let sharpenedImageUrl = null;
+
+    let sharpenRequestNumber = 0;
+
+    function hasImage() {
+
+        return originalImageFile !== null;
+
+    }
+
+    function showStatus(message) {
+
+        downloadStatus.textContent = message;
+
+    }
+
+    function clearSharpenedImage() {
+
+        sharpenRequestNumber++;
+
+        if (sharpenedImageUrl) {
+
+            URL.revokeObjectURL(sharpenedImageUrl);
+
+            sharpenedImageUrl = null;
+
+        }
+
+    }
+
+    function updateImageFilters() {
+
+        brightnessValue.textContent = brightness.value + "%";
+
+        contrastValue.textContent = contrast.value + "%";
+
+        blurValue.textContent = Number(blur.value).toFixed(1);
+
+        sharpenValue.textContent = Number(sharpen.value).toFixed(1);
+
+        if (!hasImage()) {
+
+            return;
+
+        }
+
+        imagePreview.style.filter = [
+
+            `brightness(${brightness.value}%)`,
+
+            `contrast(${contrast.value}%)`,
+
+            grayscaleEnabled ? "grayscale(100%)" : "grayscale(0%)",
+
+            `blur(${blur.value}px)`
+
+        ].join(" ");
+
+        workspaceStatus.textContent = "Editing image";
+
+    }
+
+    function displayOriginalImage() {
+
+        clearSharpenedImage();
+
+        if (originalImageUrl) {
+
+            imagePreview.src = originalImageUrl;
+
+        }
+
+    }
+
+    imageUpload.addEventListener("change", function () {
+
+        const file = this.files[0];
+
+        if (!file) {
+
+            return;
+
+        }
+
+        const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+
+        if (!allowedTypes.includes(file.type)) {
+
+            showStatus("Please select a JPG, PNG or WebP image.");
+
+            this.value = "";
+
+            return;
+
+        }
+
+        if (originalImageUrl) {
+
+            URL.revokeObjectURL(originalImageUrl);
+
+        }
+
+        clearSharpenedImage();
+
+        originalImageFile = file;
+
+        originalImageUrl = URL.createObjectURL(file);
+
+        imagePreview.onload = function () {
+
+            imageDimensions.textContent =
+
+                this.naturalWidth + " × " + this.naturalHeight + " px";
+
+        };
+
+        imagePreview.src = originalImageUrl;
+
+        imagePreview.hidden = false;
+
+        uploadPlaceholder.hidden = true;
+
+        resetAllSettings(false);
+
+        workspaceStatus.textContent = "Image loaded successfully";
+
+        showStatus("");
+
+    });
+
+    brightness.addEventListener("input", function () {
+
+        updateImageFilters();
+
+    });
+
+    contrast.addEventListener("input", function () {
+
+        updateImageFilters();
+
+    });
+
+    blur.addEventListener("input", function () {
+
+        updateImageFilters();
+
+    });
+
+    document.getElementById("resetBrightness").addEventListener("click", function () {
+
+        brightness.value = 100;
+
+        updateImageFilters();
+
+    });
+
+    document.getElementById("resetContrast").addEventListener("click", function () {
+
+        contrast.value = 100;
+
+        updateImageFilters();
+
+    });
+
+    grayscaleButton.addEventListener("click", function () {
+
+        if (!hasImage()) {
+
+            showStatus("Please upload an image first.");
+
+            return;
+
+        }
+
+        grayscaleEnabled = !grayscaleEnabled;
+
+        grayscaleButton.textContent = grayscaleEnabled
+
+            ? "Disable Grayscale"
+
+            : "Enable Grayscale";
+
+        updateImageFilters();
+
+    });
+
+    document.getElementById("resetFilters").addEventListener("click", function () {
+
+        grayscaleEnabled = false;
+
+        grayscaleButton.textContent = "Enable Grayscale";
+
+        updateImageFilters();
+
+    });
+
+    document.getElementById("resetBlur").addEventListener("click", function () {
+
+        blur.value = 0;
+
+        updateImageFilters();
+
+    });
+
+    sharpen.addEventListener("input", function () {
+
+        sharpenValue.textContent = Number(sharpen.value).toFixed(1);
+
+    });
+
+    sharpen.addEventListener("change", async function () {
+
+        if (!hasImage()) {
+
+            showStatus("Please upload an image first.");
+
+            return;
+
+        }
+
+        const amount = Number(sharpen.value);
+
+        if (amount === 1) {
+
+            displayOriginalImage();
+
+            sharpenStatus.textContent = "";
+
+            updateImageFilters();
+
+            return;
+
+        }
+
+        const requestNumber = ++sharpenRequestNumber;
+
+        sharpenStatus.textContent = "Processing sharpness...";
+
+        showStatus("");
+
+        const formData = new FormData();
+
+        formData.append("image", originalImageFile);
+
+        formData.append("amount", amount);
+
+        try {
+
+            const response = await fetch("/sharpen", {
+
+                method: "POST",
+
+                body: formData
+
+            });
+
+            if (!response.ok) {
+
+                throw new Error("Unable to process sharpness.");
+
+            }
+
+            const blob = await response.blob();
+
+            if (requestNumber !== sharpenRequestNumber) {
+
+                return;
+
+            }
+
+            if (sharpenedImageUrl) {
+
+                URL.revokeObjectURL(sharpenedImageUrl);
+
+            }
+
+            sharpenedImageUrl = URL.createObjectURL(blob);
+
+            imagePreview.src = sharpenedImageUrl;
+
+            sharpenStatus.textContent = "Sharpness applied.";
+
+            updateImageFilters();
+
+        } catch (error) {
+
+            sharpenStatus.textContent = "";
+
+            showStatus(error.message);
+
+        }
+
+    });
+
+    document.getElementById("resetSharpen").addEventListener("click", function () {
+
+        sharpen.value = 1;
+
+        sharpenValue.textContent = "1.0";
+
+        sharpenStatus.textContent = "";
+
+        displayOriginalImage();
+
+        updateImageFilters();
+
+    });
+
+    function resetAllSettings(showMessage = true) {
+
+        brightness.value = 100;
+
+        contrast.value = 100;
+
+        blur.value = 0;
+
+        sharpen.value = 1;
+
+        grayscaleEnabled = false;
+
+        grayscaleButton.textContent = "Enable Grayscale";
+
+        sharpenStatus.textContent = "";
+
+        if (hasImage()) {
+
+            displayOriginalImage();
+
+        }
+
+        updateImageFilters();
+
+        if (showMessage) {
+
+            showStatus("All editing settings have been reset.");
+
+        }
+
+    }
+
+    resetAllEdits.addEventListener("click", function () {
+
+        if (!hasImage()) {
+
+            showStatus("Please upload an image first.");
+
+            return;
+
+        }
+
+        resetAllSettings();
+
+    });
+
+    downloadButton.addEventListener("click", async function () {
+
+        if (!hasImage()) {
+
+            showStatus("Please upload an image first.");
+
+            return;
+
+        }
+
+        showStatus("Preparing your edited image...");
+
+        downloadButton.disabled = true;
+
+        const formData = new FormData();
+
+        formData.append("image", originalImageFile);
+
+        formData.append("brightness", brightness.value);
+
+        formData.append("contrast", contrast.value);
+
+        formData.append("grayscale", String(grayscaleEnabled));
+
+        formData.append("blur", blur.value);
+
+        formData.append("sharpness", sharpen.value);
+
+        try {
+
+            const response = await fetch("/download", {
+
+                method: "POST",
+
+                body: formData
+
+            });
+
+            if (!response.ok) {
+
+                let message = "Unable to download the image.";
+
+                try {
+
+                    const result = await response.json();
+
+                    if (result.error) {
+
+                        message = result.error;
+
+                    }
+
+                } catch (error) {
+
+                    // Use the default message.
+
+                }
+
+                throw new Error(message);
+
+            }
+
+            const blob = await response.blob();
+
+            const downloadUrl = URL.createObjectURL(blob);
+
+            const link = document.createElement("a");
+
+            link.href = downloadUrl;
+
+            link.download = "light_studio_edited_image.jpg";
+
+            document.body.appendChild(link);
+
+            link.click();
+
+            link.remove();
+
+            URL.revokeObjectURL(downloadUrl);
+
+            showStatus("Your edited image has been downloaded.");
+
+        } catch (error) {
+
+            showStatus(error.message);
+
+        } finally {
+
+            downloadButton.disabled = false;
+
+        }
+
+    });
+
+    // SIDEBAR NAVIGATION
+
+    const navigationButtons = document.querySelectorAll("[data-section]");
+
+    const panels = {
+
+        home: document.getElementById("homePanel"),
+
+        adjustments: document.getElementById("adjustmentPanel"),
+
+        effects: document.getElementById("effectsPanel"),
+
+        about: document.getElementById("aboutPanel")
+
+    };
+
+    const pageTitles = {
+
+        home: ["Welcome to Light Studio", "Upload an image to get started."],
+
+        adjustments: ["Image Workspace", "Adjust brightness, contrast, blur and sharpness."],
+
+        effects: ["Image Effects", "Apply effects to your image."],
+
+        about: ["About Light Studio", "Learn about your image editor."]
+
+    };
+
+    function openSection(section) {
+
+        Object.keys(panels).forEach(function (key) {
+
+            panels[key].hidden = key !== section;
+
+        });
+
+        navigationButtons.forEach(function (button) {
+
+            button.classList.toggle(
+
+                "active",
+
+                button.dataset.section === section
+
+            );
+
+        });
+
+        document.getElementById("pageTitle").textContent =
+
+            pageTitles[section][0];
+
+        document.getElementById("pageSubtitle").textContent =
+
+            pageTitles[section][1];
+
+        const panelNames = {
+
+            home: "Getting Started",
+
+            adjustments: "Adjustments",
+
+            effects: "Image Effects",
+
+            about: "About"
+
+        };
+
+        document.getElementById("panelTitle").textContent =
+
+            panelNames[section];
+
+        document.getElementById("panelSubtitle").textContent =
+
+            section === "adjustments"
+
+                ? "Fine-tune your image"
+
+                : section === "effects"
+
+                    ? "Choose an image effect"
+
+                    : section === "home"
+
+                        ? "Your editing workspace"
+
+                        : "Application information";
+
+    }
+
+    navigationButtons.forEach(function (button) {
+
+        button.addEventListener("click", function () {
+
+            openSection(button.dataset.section);
+
+        });
+
+    });
+
+    document.querySelectorAll("[data-open-tool]").forEach(function (button) {
+
+        button.addEventListener("click", function () {
+
+            openSection(button.dataset.openTool);
+
+        });
+
+    });
+
+    // INITIAL STATE
+
+    openSection("adjustments");
+
+    updateImageFilters();
+
+</script>
+
+</body>
+
+</html>

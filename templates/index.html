@@ -1,0 +1,1576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Light Studio | Image Editor</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+
+  <style>
+    [hidden] { display: none !important; }
+
+    .transform-subtools {
+      display: grid;
+      gap: 12px;
+    }
+
+    .dimension-fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 12px 0;
+    }
+
+    .dimension-fields input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #d9ded6;
+      border-radius: 8px;
+    }
+
+    .toggle-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 10px 0;
+    }
+
+    .crop-actions,
+    .rotate-actions,
+    .flip-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .crop-actions .button,
+    .rotate-actions .button,
+    .flip-actions .button {
+      flex: 1;
+    }
+
+    .tool-tile.selected {
+      outline: 2px solid #71834f;
+      background: #eef2e5;
+    }
+
+    .control-help {
+      font-size: 12px;
+      line-height: 1.5;
+      opacity: .75;
+      margin-top: 8px;
+    }
+
+    #resultPreview {
+      max-width: 100%;
+      max-height: 72vh;
+      object-fit: contain;
+      transform-origin: center;
+    }
+
+    .preview-wrap {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .status-message {
+      font-size: 13px;
+      margin-top: 10px;
+    }
+
+    .control-item input[type=range] {
+      width: 100%;
+    }
+
+    .control-item {
+      margin-bottom: 16px;
+    }
+
+    .effect-tile-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .full-width {
+      width: 100%;
+    }
+
+    /* Original tool tile dimensions and styling */
+    .tool-tile-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      width: 100%;
+    }
+
+    .tool-tile {
+      width: 100%;
+      min-width: 0;
+      min-height: 90px;
+      padding: 18px 12px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-size: 14px;
+      line-height: 1.35;
+      white-space: normal;
+    }
+
+    .tool-tile-icon {
+      display: block;
+      font-size: 25px;
+      line-height: 1;
+    }
+
+    .tool-tile.selected {
+      outline: 2px solid #71834f;
+      background: #eef2e5;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="app-container">
+
+  <aside class="sidebar">
+
+    <div class="brand">
+      <div class="brand-icon">L</div>
+      <div>
+        <h2>Light Studio</h2>
+        <p>Image Processing Studio</p>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <span class="sidebar-label">WORKSPACE</span>
+
+      <button class="nav-item active" data-target="adjustments" type="button">
+        <span class="nav-icon">☷</span>Adjustments
+      </button>
+
+      <button class="nav-item" data-target="transform" type="button">
+        <span class="nav-icon">⤢</span>Transform
+      </button>
+
+      <button class="nav-item" data-target="effects" type="button">
+        <span class="nav-icon">✦</span>Effects
+      </button>
+
+      <button class="nav-item" data-target="about" type="button">
+        <span class="nav-icon">ⓘ</span>About
+      </button>
+    </div>
+
+    <div class="sidebar-bottom">
+      <div class="sidebar-info">
+        <div class="info-icon">i</div>
+        <div>
+          <strong>Light Studio</strong>
+          <p>Digital Image Processing</p>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <main class="main-content">
+
+    <header class="topbar">
+
+      <div class="page-heading">
+        <span class="eyebrow">IMAGE WORKSPACE</span>
+        <h1 id="pageTitle">Light Studio</h1>
+        <p id="pageDescription">Upload an image, then choose an editing tool.</p>
+      </div>
+
+      <div class="topbar-actions">
+        <button class="button button-primary" id="downloadButton" type="button">
+          ↓ Download Image
+        </button>
+      </div>
+
+    </header>
+
+    <input accept="image/png,image/jpeg,image/webp" hidden id="imageUpload" type="file">
+
+    <section class="editor-layout" id="editorLayout">
+
+      <!-- IMAGE UPLOAD AND PREVIEW -->
+
+      <section class="image-card upload-card" id="uploadCard">
+
+        <div class="image-stage upload-stage" id="uploadDropArea">
+
+          <div class="upload-placeholder" id="uploadPlaceholder">
+            <div class="upload-icon">↑</div>
+            <h3>Drag and drop an image here</h3>
+            <p>or</p>
+
+            <label class="button button-primary" for="imageUpload">
+              Choose Image
+            </label>
+
+            <span class="file-note">Supports JPG, PNG and WebP</span>
+          </div>
+
+          <div class="preview-wrap">
+            <img alt="Image preview" class="preview-image" hidden id="resultPreview">
+          </div>
+
+        </div>
+
+        <div class="image-actions" hidden id="imageActions">
+
+          <button class="button button-secondary image-action-button" id="undoButton" type="button" disabled>
+            ↶ Undo
+          </button>
+
+          <button class="button button-secondary image-action-button" id="redoButton" type="button" disabled>
+            ↷ Redo
+          </button>
+
+          <button class="button button-secondary image-action-button" id="resetAllEdits" type="button">
+            ↺ Reset
+          </button>
+
+          <button class="button button-danger image-action-button" id="deleteImageButton" type="button">
+            × Remove Image
+          </button>
+
+        </div>
+
+        <div class="status-message" id="downloadStatus">
+          Upload an image to start editing.
+        </div>
+
+      </section>
+
+      <!-- ADJUSTMENTS SECTION -->
+
+      <section class="adjustments-card" id="adjustmentsCard">
+
+        <div class="card-header">
+          <div>
+            <span class="card-step">01</span>
+            <h2>Adjustments</h2>
+            <p>Fine-tune your image</p>
+          </div>
+        </div>
+
+        <div class="tool-tile-grid" aria-label="Adjustment tools">
+
+          <button class="tool-tile" data-control="brightnessControl" type="button">
+            <span class="tool-tile-icon">☼</span>
+            <span>Brightness</span>
+          </button>
+
+          <button class="tool-tile" data-control="contrastControl" type="button">
+            <span class="tool-tile-icon">◐</span>
+            <span>Contrast</span>
+          </button>
+
+          <button class="tool-tile" data-control="saturationControl" type="button">
+            <span class="tool-tile-icon">◉</span>
+            <span>Saturation</span>
+          </button>
+
+          <button class="tool-tile" data-control="shadowControl" type="button">
+            <span class="tool-tile-icon">◒</span>
+            <span>Shadow</span>
+          </button>
+
+          <button class="tool-tile" data-control="blurControl" type="button">
+            <span class="tool-tile-icon">✧</span>
+            <span>Blur</span>
+          </button>
+
+          <button class="tool-tile" data-control="sharpnessControl" type="button">
+            <span class="tool-tile-icon">✥</span>
+            <span>Sharpness</span>
+          </button>
+
+          <button class="tool-tile" data-control="vignetteControl" type="button">
+            <span class="tool-tile-icon">◉</span>
+            <span>Vignette</span>
+          </button>
+
+          <button class="tool-tile" data-control="temperatureControl" type="button">
+            <span class="tool-tile-icon">♨</span>
+            <span>Temperature</span>
+          </button>
+
+        </div>
+
+        <div class="control-list" id="adjustmentControlList">
+
+          <div class="control-item" id="brightnessControl" hidden>
+            <div class="control-heading">
+              <label for="brightness">Brightness</label>
+              <span class="control-value" id="brightnessValue">100%</span>
+            </div>
+            <input id="brightness" type="range" min="0" max="200" value="100">
+            <div class="range-labels">
+              <span>0</span>
+              <button data-reset="brightness" type="button">Reset</button>
+              <span>200</span>
+            </div>
+          </div>
+
+          <div class="control-item" id="contrastControl" hidden>
+            <div class="control-heading">
+              <label for="contrast">Contrast</label>
+              <span class="control-value" id="contrastValue">100%</span>
+            </div>
+            <input id="contrast" type="range" min="0" max="200" value="100">
+            <div class="range-labels">
+              <span>0</span>
+              <button data-reset="contrast" type="button">Reset</button>
+              <span>200</span>
+            </div>
+          </div>
+
+          <div class="control-item" id="saturationControl" hidden>
+            <div class="control-heading">
+              <label for="saturation">Saturation</label>
+              <span class="control-value" id="saturationValue">100%</span>
+            </div>
+            <input id="saturation" type="range" min="0" max="200" value="100">
+            <div class="range-labels">
+              <span>0</span>
+              <button data-reset="saturation" type="button">Reset</button>
+              <span>200</span>
+            </div>
+          </div>
+
+          <div class="control-item" id="shadowControl" hidden>
+            <div class="control-heading">
+              <label for="shadow">Shadow</label>
+              <span class="control-value" id="shadowValue">0</span>
+            </div>
+            <input id="shadow" type="range" min="-100" max="100" value="0">
+            <div class="range-labels">
+              <span>-100</span>
+              <button data-reset="shadow" type="button">Reset</button>
+              <span>100</span>
+            </div>
+          </div>
+
+          <div class="control-item" id="blurControl" hidden>
+            <div class="control-heading">
+              <label for="blur">Blur</label>
+              <span class="control-value" id="blurValue">0</span>
+            </div>
+            <input id="blur" type="range" min="0" max="20" step=".5" value="0">
+            <div class="range-labels">
+              <span>0</span>
+              <button data-reset="blur" type="button">Reset</button>
+              <span>20</span>
+            </div>
+          </div>
+
+          <div class="control-item" id="sharpnessControl" hidden>
+            <div class="control-heading">
+              <label for="sharpness">Sharpness</label>
+              <span class="control-value" id="sharpnessValue">1.0×</span>
+            </div>
+            <input id="sharpness" type="range" min="0" max="5" step=".1" value="1">
+            <div class="range-labels">
+              <span>0</span>
+              <button data-reset="sharpness" type="button">Reset</button>
+              <span>5</span>
+            </div>
+          </div>
+
+          <div class="control-item" id="vignetteControl" hidden>
+            <div class="control-heading">
+              <label for="vignette">Vignette</label>
+              <span class="control-value" id="vignetteValue">0%</span>
+            </div>
+            <input id="vignette" type="range" min="0" max="100" value="0">
+            <div class="range-labels">
+              <span>0</span>
+              <button data-reset="vignette" type="button">Reset</button>
+              <span>100</span>
+            </div>
+          </div>
+
+          <div class="control-item" id="temperatureControl" hidden>
+            <div class="control-heading">
+              <label for="temperature">Temperature</label>
+              <span class="control-value" id="temperatureValue">0</span>
+            </div>
+            <input id="temperature" type="range" min="-100" max="100" value="0">
+            <div class="range-labels">
+              <span>Cool</span>
+              <button data-reset="temperature" type="button">Reset</button>
+              <span>Warm</span>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="adjustments-footer">
+          <button class="button button-secondary full-width" id="resetAdjustments" type="button">
+            Reset Adjustments
+          </button>
+        </div>
+
+      </section>
+
+      <!-- TRANSFORM SECTION -->
+
+      <section class="adjustments-card" id="transformCard" hidden>
+
+        <div class="card-header">
+          <div>
+            <span class="card-step">02</span>
+            <h2>Transform</h2>
+            <p>Crop, rotate, resize and flip</p>
+          </div>
+        </div>
+
+        <!-- These four tiles keep the same size and style as other tiles -->
+
+        <div class="tool-tile-grid">
+
+          <button class="tool-tile" data-transform="cropPanel" type="button">
+            <span class="tool-tile-icon">▣</span>
+            <span>Crop</span>
+          </button>
+
+          <button class="tool-tile" data-transform="rotatePanel" type="button">
+            <span class="tool-tile-icon">⟳</span>
+            <span>Rotate</span>
+          </button>
+
+          <button class="tool-tile" data-transform="resizePanel" type="button">
+            <span class="tool-tile-icon">⤢</span>
+            <span>Resize</span>
+          </button>
+
+          <button class="tool-tile" data-transform="flipPanel" type="button">
+            <span class="tool-tile-icon">↔</span>
+            <span>Flip</span>
+          </button>
+
+        </div>
+
+        <!-- CROP -->
+
+        <div class="control-list transform-subtools">
+
+          <div class="control-item" id="cropPanel" hidden>
+
+            <h3>Crop Image</h3>
+
+            <p class="control-help">
+              Select the image area you want to keep.
+            </p>
+
+            <div class="crop-actions">
+              <button class="button button-secondary" id="startCrop" type="button">
+                Start Cropping
+              </button>
+
+              <button class="button button-primary" id="applyCrop" type="button" disabled>
+                Apply Crop
+              </button>
+
+              <button class="button button-secondary" id="cancelCrop" type="button">
+                Cancel
+              </button>
+            </div>
+
+          </div>
+
+          <!-- ROTATE -->
+
+          <div class="control-item" id="rotatePanel" hidden>
+
+            <h3>Rotate Image</h3>
+
+            <div class="rotate-actions">
+
+              <button class="button button-secondary" id="rotateLeft" type="button">
+                ↶ 90° Left
+              </button>
+
+              <button class="button button-secondary" id="rotateRight" type="button">
+                ↷ 90° Right
+              </button>
+
+            </div>
+
+          </div>
+
+          <!-- RESIZE -->
+
+          <div class="control-item" id="resizePanel" hidden>
+
+            <h3>Resize Image</h3>
+
+            <div class="dimension-fields">
+
+              <label>
+                Width (px)
+                <input id="resizeWidth" type="number" min="1" max="12000" value="800">
+              </label>
+
+              <label>
+                Height (px)
+                <input id="resizeHeight" type="number" min="1" max="12000" value="600">
+              </label>
+
+            </div>
+
+            <label class="toggle-line">
+              <input id="keepRatio" type="checkbox" checked>
+              Maintain aspect ratio
+            </label>
+
+            <button class="button button-primary full-width" id="applyResize" type="button">
+              Apply Resize
+            </button>
+
+          </div>
+
+          <!-- FLIP -->
+
+          <div class="control-item" id="flipPanel" hidden>
+
+            <h3>Flip Image</h3>
+
+            <div class="flip-actions">
+
+              <button class="button button-secondary" id="flipHorizontal" type="button">
+                ↔ Flip Horizontal
+              </button>
+
+              <button class="button button-secondary" id="flipVertical" type="button">
+                ↕ Flip Vertical
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- EFFECTS SECTION -->
+
+      <section class="adjustments-card effects-card" id="effectsCard" hidden>
+
+        <div class="card-header">
+          <div>
+            <span class="card-step">03</span>
+            <h2>Effects</h2>
+            <p>Choose an image effect</p>
+          </div>
+        </div>
+
+        <div class="tool-tile-grid effect-tile-grid">
+
+          <button class="tool-tile" data-effect="cool" type="button">
+            <span class="tool-tile-icon">❄</span>
+            <span>Cool</span>
+          </button>
+
+          <button class="tool-tile" data-effect="sepia" type="button">
+            <span class="tool-tile-icon">🟤</span>
+            <span>Sepia</span>
+          </button>
+
+          <button class="tool-tile" data-effect="negative" type="button">
+            <span class="tool-tile-icon">◐</span>
+            <span>Negative</span>
+          </button>
+
+          <button class="tool-tile" data-effect="blackwhite" type="button">
+            <span class="tool-tile-icon">◑</span>
+            <span>Black &amp; White</span>
+          </button>
+
+          <button class="tool-tile" data-effect="grayscale" type="button">
+            <span class="tool-tile-icon">◒</span>
+            <span>Grayscale</span>
+          </button>
+
+          <button class="tool-tile" data-effect="cinematic" type="button">
+            <span class="tool-tile-icon">▣</span>
+            <span>Cinematic</span>
+          </button>
+
+          <button class="tool-tile" data-effect="vintage" type="button">
+            <span class="tool-tile-icon">▧</span>
+            <span>Vintage</span>
+          </button>
+
+          <button class="tool-tile" data-effect="retro" type="button">
+            <span class="tool-tile-icon">✦</span>
+            <span>Retro</span>
+          </button>
+
+        </div>
+
+        <div class="adjustments-footer">
+          <button class="button button-secondary full-width" id="clearEffect" type="button">
+            Clear Effect
+          </button>
+        </div>
+
+      </section>
+
+      <!-- ABOUT SECTION -->
+
+      <section class="about-card" id="aboutCard" hidden>
+
+        <div class="card-header">
+          <div>
+            <span class="card-step">LS</span>
+            <h2>About Light Studio</h2>
+            <p>Image editing and processing</p>
+          </div>
+        </div>
+
+        <p>
+          Light Studio is an image-processing application with adjustments,
+          transformations and creative effects. Upload an image, edit it,
+          then download the processed result.
+        </p>
+
+      </section>
+
+    </section>
+
+  </main>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+
+<script>
+(() => {
+
+  const $ = id => document.getElementById(id);
+
+  const imageUpload = $('imageUpload');
+  const preview = $('resultPreview');
+  const uploadArea = $('uploadDropArea');
+
+  const sliders = [
+    'brightness',
+    'contrast',
+    'saturation',
+    'shadow',
+    'blur',
+    'sharpness',
+    'vignette',
+    'temperature'
+  ];
+
+  const defaults = {
+    brightness: 100,
+    contrast: 100,
+    saturation: 100,
+    shadow: 0,
+    blur: 0,
+    sharpness: 1,
+    vignette: 0,
+    temperature: 0
+  };
+
+  let selectedFile = null;
+  let cropper = null;
+  let cropData = null;
+  let rotation = 0;
+
+  let flipH = false;
+  let flipV = false;
+  let effect = 'none';
+
+  let previewUrl = null;
+  let previewTimer = null;
+
+  let history = [];
+  let historyIndex = -1;
+  let isRestoring = false;
+
+  let cropSourceUrl = null;
+  let imageRatio = 1;
+
+  let originalWidth = 0;
+  let originalHeight = 0;
+
+  // CURRENT EDITING STATE
+
+  const state = () => ({
+    values: Object.fromEntries(
+      sliders.map(id => [id, $(id).value])
+    ),
+
+    crop: cropData ? {...cropData} : null,
+    rotation,
+    flipH,
+    flipV,
+    effect,
+
+    resizeWidth: $('resizeWidth').value,
+    resizeHeight: $('resizeHeight').value
+  });
+
+  function setStatus(message) {
+    $('downloadStatus').textContent = message;
+  }
+
+  function hasImage() {
+    return !!selectedFile;
+  }
+
+  // UNDO AND REDO
+
+  function updateHistoryButtons() {
+    $('undoButton').disabled = historyIndex <= 0;
+    $('redoButton').disabled = historyIndex >= history.length - 1;
+  }
+
+  function saveHistory() {
+
+    if (!hasImage() || isRestoring) return;
+
+    const snapshot = JSON.stringify(state());
+
+    if (history[historyIndex] === snapshot) return;
+
+    history = history.slice(0, historyIndex + 1);
+
+    history.push(snapshot);
+
+    if (history.length > 60) {
+      history.shift();
+    }
+
+    historyIndex = history.length - 1;
+
+    updateHistoryButtons();
+  }
+
+  function restoreHistory(index) {
+
+    if (index < 0 || index >= history.length) return;
+
+    isRestoring = true;
+
+    const s = JSON.parse(history[index]);
+
+    sliders.forEach(id => {
+      $(id).value = s.values[id];
+    });
+
+    cropData = s.crop;
+    rotation = s.rotation;
+    flipH = s.flipH;
+    flipV = s.flipV;
+    effect = s.effect;
+
+    $('resizeWidth').value = s.resizeWidth || '';
+    $('resizeHeight').value = s.resizeHeight || '';
+
+    updateImageRatio();
+
+    document.querySelectorAll('[data-effect]').forEach(button => {
+      button.classList.toggle(
+        'selected',
+        button.dataset.effect === effect
+      );
+    });
+
+    historyIndex = index;
+
+    isRestoring = false;
+
+    updateHistoryButtons();
+    updateValueLabels();
+    refreshPreview();
+  }
+
+  // SEND IMAGE AND SETTINGS TO FLASK
+
+  function formData() {
+
+    const fd = new FormData();
+
+    fd.append('image', selectedFile);
+
+    sliders.forEach(id => {
+      fd.append(id, $(id).value);
+    });
+
+    fd.append('crop_x', cropData?.x ?? 0);
+    fd.append('crop_y', cropData?.y ?? 0);
+    fd.append('crop_width', cropData?.width ?? 0);
+    fd.append('crop_height', cropData?.height ?? 0);
+
+    fd.append('rotation', rotation);
+    fd.append('flip_horizontal', flipH);
+    fd.append('flip_vertical', flipV);
+
+    fd.append('resize_width', $('resizeWidth').value || 0);
+    fd.append('resize_height', $('resizeHeight').value || 0);
+
+    fd.append('effect', effect);
+
+    return fd;
+  }
+
+  // LIVE IMAGE PREVIEW
+
+  async function refreshPreview() {
+
+    if (!hasImage()) return;
+
+    clearTimeout(previewTimer);
+
+    previewTimer = setTimeout(async () => {
+
+      setStatus('Updating preview…');
+
+      try {
+
+        const response = await fetch('/preview', {
+          method: 'POST',
+          body: formData()
+        });
+
+        if (!response.ok) {
+          throw new Error('Preview processing failed.');
+        }
+
+        const blob = await response.blob();
+
+        const newUrl = URL.createObjectURL(blob);
+        const oldUrl = previewUrl;
+
+        previewUrl = newUrl;
+        preview.src = newUrl;
+
+        if (oldUrl) {
+          URL.revokeObjectURL(oldUrl);
+        }
+
+        setStatus('Preview updated. Your edits are ready.');
+
+      } catch (err) {
+
+        setStatus(err.message);
+
+      }
+
+    }, 180);
+  }
+
+  // UPDATE SLIDER VALUES
+
+  function updateValueLabels() {
+
+    sliders.forEach(id => {
+
+      const suffix =
+        ['brightness', 'contrast', 'saturation', 'vignette'].includes(id)
+          ? '%'
+          : id === 'sharpness'
+            ? '×'
+            : '';
+
+      $(id + 'Value').textContent =
+        Number($(id).value).toFixed(
+          id === 'sharpness' || id === 'blur' ? 1 : 0
+        ) + suffix;
+
+    });
+  }
+
+  // NAVIGATION
+
+  function setWorkspaceView(view) {
+
+    document.querySelectorAll('.nav-item').forEach(button => {
+      button.classList.toggle(
+        'active',
+        button.dataset.target === view
+      );
+    });
+
+    $('adjustmentsCard').hidden = view !== 'adjustments';
+    $('transformCard').hidden = view !== 'transform';
+    $('effectsCard').hidden = view !== 'effects';
+    $('aboutCard').hidden = view !== 'about';
+
+    $('uploadCard').hidden = view === 'about';
+
+    $('pageTitle').textContent =
+      view === 'about' ? 'About Light Studio' : 'Light Studio';
+
+    $('pageDescription').textContent =
+      view === 'about'
+        ? 'Simple image editing and processing.'
+        : 'Upload an image and edit it in the workspace.';
+  }
+
+  // IMAGE DIMENSIONS AND ASPECT RATIO
+
+  function updateImageRatio() {
+
+    let width = cropData?.width || originalWidth;
+    let height = cropData?.height || originalHeight;
+
+    if (!width || !height) return;
+
+    const normalizedRotation =
+      ((rotation % 360) + 360) % 360;
+
+    if (
+      normalizedRotation === 90 ||
+      normalizedRotation === 270
+    ) {
+      [width, height] = [height, width];
+    }
+
+    imageRatio = width / height || 1;
+  }
+
+  function updateResizeDimensions() {
+
+    let width = cropData?.width || originalWidth;
+    let height = cropData?.height || originalHeight;
+
+    if (!width || !height) return;
+
+    const normalizedRotation =
+      ((rotation % 360) + 360) % 360;
+
+    if (
+      normalizedRotation === 90 ||
+      normalizedRotation === 270
+    ) {
+      [width, height] = [height, width];
+    }
+
+    imageRatio = width / height || 1;
+
+    $('resizeWidth').value = width;
+    $('resizeHeight').value = height;
+  }
+
+  // IMAGE UPLOAD
+
+  imageUpload.addEventListener('change', event => {
+    loadImage(event.target.files?.[0]);
+  });
+
+  function loadImage(file) {
+
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Choose a valid JPG, PNG or WebP image.');
+      return;
+    }
+
+    selectedFile = file;
+
+    cropData = null;
+    rotation = 0;
+    flipH = false;
+    flipV = false;
+    effect = 'none';
+
+    if (cropper) {
+      cropper.destroy();
+      cropper = null;
+    }
+
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
+    previewUrl = URL.createObjectURL(file);
+
+    preview.src = previewUrl;
+    preview.hidden = false;
+
+    $('uploadPlaceholder').hidden = true;
+    $('imageActions').hidden = false;
+
+    sliders.forEach(id => {
+      $(id).value = defaults[id];
+    });
+
+    updateValueLabels();
+
+    document.querySelectorAll('[data-effect]').forEach(button => {
+      button.classList.remove('selected');
+    });
+
+    document.querySelectorAll('[data-transform]').forEach(button => {
+      button.classList.remove('selected');
+    });
+
+    document.querySelectorAll('.transform-subtools .control-item').forEach(panel => {
+      panel.hidden = true;
+    });
+
+    history = [];
+    historyIndex = -1;
+
+    setWorkspaceView('adjustments');
+
+    setStatus('Image loaded. Start editing.');
+
+    const img = new Image();
+
+    img.onload = () => {
+
+      originalWidth = img.naturalWidth;
+      originalHeight = img.naturalHeight;
+
+      updateResizeDimensions();
+
+      saveHistory();
+
+      URL.revokeObjectURL(img.src);
+    };
+
+    img.src = URL.createObjectURL(file);
+  }
+
+  // ADJUSTMENT TOOL SELECTION
+
+  document.querySelectorAll('.nav-item').forEach(button => {
+
+    button.addEventListener('click', () => {
+      setWorkspaceView(button.dataset.target);
+    });
+
+  });
+
+  document.querySelectorAll('[data-control]').forEach(button => {
+
+    button.addEventListener('click', () => {
+
+      const id = button.dataset.control;
+
+      document.querySelectorAll(
+        '#adjustmentControlList .control-item'
+      ).forEach(panel => {
+        panel.hidden = panel.id !== id;
+      });
+
+      document.querySelectorAll('[data-control]').forEach(item => {
+        item.classList.toggle('selected', item === button);
+      });
+
+    });
+
+  });
+
+  // TRANSFORM TOOL SELECTION
+  // Clicking a tile only displays its controls.
+  // It does not change the tile's dimensions.
+
+  document.querySelectorAll('[data-transform]').forEach(button => {
+
+    button.addEventListener('click', () => {
+
+      const id = button.dataset.transform;
+
+      document.querySelectorAll(
+        '.transform-subtools .control-item'
+      ).forEach(panel => {
+        panel.hidden = panel.id !== id;
+      });
+
+      document.querySelectorAll('[data-transform]').forEach(item => {
+        item.classList.toggle('selected', item === button);
+      });
+
+    });
+
+  });
+
+  // ADJUSTMENT SLIDERS
+
+  sliders.forEach(id => {
+
+    $(id).addEventListener('input', () => {
+      updateValueLabels();
+      refreshPreview();
+    });
+
+    $(id).addEventListener('change', saveHistory);
+
+  });
+
+  document.querySelectorAll('[data-reset]').forEach(button => {
+
+    button.addEventListener('click', () => {
+
+      const id = button.dataset.reset;
+
+      $(id).value = defaults[id];
+
+      updateValueLabels();
+      refreshPreview();
+      saveHistory();
+
+    });
+
+  });
+
+  $('resetAdjustments').addEventListener('click', () => {
+
+    sliders.forEach(id => {
+      $(id).value = defaults[id];
+    });
+
+    updateValueLabels();
+    refreshPreview();
+    saveHistory();
+
+  });
+
+  // EFFECTS
+
+  document.querySelectorAll('[data-effect]').forEach(button => {
+
+    button.addEventListener('click', () => {
+
+      effect =
+        effect === button.dataset.effect
+          ? 'none'
+          : button.dataset.effect;
+
+      document.querySelectorAll('[data-effect]').forEach(item => {
+        item.classList.toggle(
+          'selected',
+          item.dataset.effect === effect
+        );
+      });
+
+      refreshPreview();
+      saveHistory();
+
+    });
+
+  });
+
+  $('clearEffect').addEventListener('click', () => {
+
+    effect = 'none';
+
+    document.querySelectorAll('[data-effect]').forEach(button => {
+      button.classList.remove('selected');
+    });
+
+    refreshPreview();
+    saveHistory();
+
+  });
+
+  // CROP
+
+  $('startCrop').addEventListener('click', () => {
+
+    if (!hasImage()) {
+      alert('Upload an image first.');
+      return;
+    }
+
+    if (cropper) {
+      cropper.destroy();
+      cropper = null;
+    }
+
+    if (cropSourceUrl) {
+      URL.revokeObjectURL(cropSourceUrl);
+    }
+
+    cropSourceUrl = URL.createObjectURL(selectedFile);
+
+    preview.src = cropSourceUrl;
+
+    cropper = new Cropper(preview, {
+      viewMode: 1,
+      autoCropArea: 0.8,
+      responsive: true,
+      background: false,
+      movable: true,
+      zoomable: false,
+      rotatable: false,
+      scalable: false
+    });
+
+    $('applyCrop').disabled = false;
+
+    setStatus('Select the area you want to crop.');
+
+  });
+
+  $('applyCrop').addEventListener('click', () => {
+
+    if (!cropper) return;
+
+    const data = cropper.getData(true);
+
+    cropData = {
+      x: Math.round(data.x),
+      y: Math.round(data.y),
+      width: Math.round(data.width),
+      height: Math.round(data.height)
+    };
+
+    cropper.destroy();
+    cropper = null;
+
+    $('applyCrop').disabled = true;
+
+    if (cropSourceUrl) {
+      URL.revokeObjectURL(cropSourceUrl);
+      cropSourceUrl = null;
+    }
+
+    updateResizeDimensions();
+
+    refreshPreview();
+    saveHistory();
+
+    setStatus('Crop applied.');
+
+  });
+
+  $('cancelCrop').addEventListener('click', () => {
+
+    if (cropper) {
+      cropper.destroy();
+      cropper = null;
+    }
+
+    if (cropSourceUrl) {
+      URL.revokeObjectURL(cropSourceUrl);
+      cropSourceUrl = null;
+    }
+
+    $('applyCrop').disabled = true;
+
+    refreshPreview();
+
+    setStatus('Crop selection cancelled.');
+
+  });
+
+  // ROTATE
+
+  $('rotateLeft').addEventListener('click', () => {
+
+    rotation -= 90;
+
+    updateResizeDimensions();
+
+    refreshPreview();
+    saveHistory();
+
+  });
+
+  $('rotateRight').addEventListener('click', () => {
+
+    rotation += 90;
+
+    updateResizeDimensions();
+
+    refreshPreview();
+    saveHistory();
+
+  });
+
+  // FLIP
+
+  $('flipHorizontal').addEventListener('click', () => {
+
+    flipH = !flipH;
+
+    $('flipHorizontal').classList.toggle('selected', flipH);
+
+    refreshPreview();
+    saveHistory();
+
+  });
+
+  $('flipVertical').addEventListener('click', () => {
+
+    flipV = !flipV;
+
+    $('flipVertical').classList.toggle('selected', flipV);
+
+    refreshPreview();
+    saveHistory();
+
+  });
+
+  // RESIZE
+
+  $('resizeWidth').addEventListener('input', () => {
+
+    if (
+      $('keepRatio').checked &&
+      $('resizeWidth').value &&
+      imageRatio
+    ) {
+      $('resizeHeight').value = Math.max(
+        1,
+        Math.round(Number($('resizeWidth').value) / imageRatio)
+      );
+    }
+
+  });
+
+  $('resizeHeight').addEventListener('input', () => {
+
+    if (
+      $('keepRatio').checked &&
+      $('resizeHeight').value &&
+      imageRatio
+    ) {
+      $('resizeWidth').value = Math.max(
+        1,
+        Math.round(Number($('resizeHeight').value) * imageRatio)
+      );
+    }
+
+  });
+
+  $('applyResize').addEventListener('click', () => {
+
+    if (!hasImage()) {
+      alert('Upload an image first.');
+      return;
+    }
+
+    const width = Math.max(
+      1,
+      Math.min(12000, Number($('resizeWidth').value) || 1)
+    );
+
+    const height = Math.max(
+      1,
+      Math.min(12000, Number($('resizeHeight').value) || 1)
+    );
+
+    $('resizeWidth').value = width;
+    $('resizeHeight').value = height;
+
+    refreshPreview();
+    saveHistory();
+
+    setStatus('Image resized.');
+
+  });
+
+  // UNDO AND REDO
+
+  $('undoButton').addEventListener('click', () => {
+    restoreHistory(historyIndex - 1);
+  });
+
+  $('redoButton').addEventListener('click', () => {
+    restoreHistory(historyIndex + 1);
+  });
+
+  // RESET ALL EDITS
+
+  $('resetAllEdits').addEventListener('click', () => {
+
+    sliders.forEach(id => {
+      $(id).value = defaults[id];
+    });
+
+    cropData = null;
+    rotation = 0;
+    flipH = false;
+    flipV = false;
+    effect = 'none';
+
+    updateResizeDimensions();
+
+    document.querySelectorAll('[data-effect], [data-transform]').forEach(button => {
+      button.classList.remove('selected');
+    });
+
+    document.querySelectorAll('.transform-subtools .control-item').forEach(panel => {
+      panel.hidden = true;
+    });
+
+    updateValueLabels();
+
+    refreshPreview();
+    saveHistory();
+
+    setStatus('All edits reset.');
+
+  });
+
+  // REMOVE IMAGE
+
+  $('deleteImageButton').addEventListener('click', () => {
+
+    if (cropper) {
+      cropper.destroy();
+      cropper = null;
+    }
+
+    if (cropSourceUrl) {
+      URL.revokeObjectURL(cropSourceUrl);
+      cropSourceUrl = null;
+    }
+
+    selectedFile = null;
+    imageUpload.value = '';
+
+    preview.removeAttribute('src');
+    preview.hidden = true;
+
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
+    previewUrl = null;
+
+    $('uploadPlaceholder').hidden = false;
+    $('imageActions').hidden = true;
+
+    history = [];
+    historyIndex = -1;
+
+    updateHistoryButtons();
+
+    setStatus('Choose an image to start editing.');
+
+  });
+
+  // DOWNLOAD IMAGE
+
+  $('downloadButton').addEventListener('click', async () => {
+
+    if (!hasImage()) {
+      alert('Please upload an image first.');
+      return;
+    }
+
+    if (cropper) {
+      alert('Apply or cancel the crop selection before downloading.');
+      return;
+    }
+
+    setStatus('Preparing your edited image…');
+
+    try {
+
+      const response = await fetch('/download', {
+        method: 'POST',
+        body: formData()
+      });
+
+      if (!response.ok) {
+
+        const data = await response.json().catch(() => ({}));
+
+        throw new Error(
+          data.error || 'Download failed.'
+        );
+
+      }
+
+      const blob = await response.blob();
+
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+
+      link.href = url;
+      link.download = 'light_studio_edited_image.jpg';
+
+      document.body.appendChild(link);
+
+      link.click();
+      link.remove();
+
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 1500);
+
+      setStatus('Edited image downloaded successfully.');
+
+    } catch (err) {
+
+      setStatus(err.message);
+
+    }
+
+  });
+
+  // DRAG AND DROP IMAGE UPLOAD
+
+  ['dragenter', 'dragover'].forEach(name => {
+
+    uploadArea.addEventListener(name, event => {
+
+      event.preventDefault();
+
+      uploadArea.classList.add('drag-active');
+
+    });
+
+  });
+
+  ['dragleave', 'drop'].forEach(name => {
+
+    uploadArea.addEventListener(name, event => {
+
+      event.preventDefault();
+
+      uploadArea.classList.remove('drag-active');
+
+    });
+
+  });
+
+  uploadArea.addEventListener('drop', event => {
+
+    const file = event.dataTransfer.files?.[0];
+
+    if (file) {
+      loadImage(file);
+    }
+
+  });
+
+  // INITIAL SETUP
+
+  setWorkspaceView('adjustments');
+  updateValueLabels();
+
+})();
+</script>
+
+</body>
+</html>
