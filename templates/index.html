@@ -84,7 +84,7 @@
       margin-top: 10px;
     }
 
-    .control-item input[type=range] {
+    .control-item input[type="range"] {
       width: 100%;
     }
 
@@ -100,7 +100,7 @@
       width: 100%;
     }
 
-    /* Original tool tile dimensions and styling */
+    /* Keep tool tiles consistent when selected */
     .tool-tile-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -108,10 +108,12 @@
       width: 100%;
     }
 
-    .tool-tile {
+    .tool-tile,
+    .tool-tile.selected {
       width: 100%;
       min-width: 0;
       min-height: 90px;
+      height: 90px;
       padding: 18px 12px;
       box-sizing: border-box;
       display: flex;
@@ -122,6 +124,8 @@
       font-size: 14px;
       line-height: 1.35;
       white-space: normal;
+      transform: none !important;
+      scale: none !important;
     }
 
     .tool-tile-icon {
@@ -130,9 +134,72 @@
       line-height: 1;
     }
 
-    .tool-tile.selected {
+    #transformCard .tool-tile,
+    #transformCard .tool-tile.selected {
+      min-height: 90px;
+      height: 90px;
+      padding: 18px 12px;
+      transform: none !important;
+    }
+
+    /* Center upload prompt */
+    #uploadPlaceholder {
+      width: 100%;
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      margin: 0 auto;
+    }
+
+    #uploadPlaceholder[hidden] {
+      display: none !important;
+    }
+
+    .upload-stage {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* Cropper display */
+    .cropper-container {
+      max-width: 100%;
+    }
+
+    .cropper-view-box {
       outline: 2px solid #71834f;
-      background: #eef2e5;
+      outline-color: #71834f;
+    }
+
+    .cropper-line,
+    .cropper-point {
+      background-color: #71834f;
+    }
+
+    .cropper-bg {
+      background-image: none !important;
+    }
+
+    .cropper-container img {
+      max-width: none !important;
+      max-height: none !important;
+    }
+
+    @media (max-width: 700px) {
+      .tool-tile-grid {
+        gap: 10px;
+      }
+
+      .tool-tile,
+      .tool-tile.selected {
+        min-height: 82px;
+        height: 82px;
+        padding: 12px 8px;
+      }
     }
   </style>
 </head>
@@ -316,50 +383,50 @@
           <div class="control-item" id="brightnessControl" hidden>
             <div class="control-heading">
               <label for="brightness">Brightness</label>
-              <span class="control-value" id="brightnessValue">100%</span>
+              <span class="control-value" id="brightnessValue">50%</span>
             </div>
-            <input id="brightness" type="range" min="0" max="200" value="100">
+            <input id="brightness" type="range" min="0" max="100" value="50">
             <div class="range-labels">
               <span>0</span>
               <button data-reset="brightness" type="button">Reset</button>
-              <span>200</span>
+              <span>100</span>
             </div>
           </div>
 
           <div class="control-item" id="contrastControl" hidden>
             <div class="control-heading">
               <label for="contrast">Contrast</label>
-              <span class="control-value" id="contrastValue">100%</span>
+              <span class="control-value" id="contrastValue">50%</span>
             </div>
-            <input id="contrast" type="range" min="0" max="200" value="100">
+            <input id="contrast" type="range" min="0" max="100" value="50">
             <div class="range-labels">
               <span>0</span>
               <button data-reset="contrast" type="button">Reset</button>
-              <span>200</span>
+              <span>100</span>
             </div>
           </div>
 
           <div class="control-item" id="saturationControl" hidden>
             <div class="control-heading">
               <label for="saturation">Saturation</label>
-              <span class="control-value" id="saturationValue">100%</span>
+              <span class="control-value" id="saturationValue">50%</span>
             </div>
-            <input id="saturation" type="range" min="0" max="200" value="100">
+            <input id="saturation" type="range" min="0" max="100" value="50">
             <div class="range-labels">
               <span>0</span>
               <button data-reset="saturation" type="button">Reset</button>
-              <span>200</span>
+              <span>100</span>
             </div>
           </div>
 
           <div class="control-item" id="shadowControl" hidden>
             <div class="control-heading">
               <label for="shadow">Shadow</label>
-              <span class="control-value" id="shadowValue">0</span>
+              <span class="control-value" id="shadowValue">50</span>
             </div>
-            <input id="shadow" type="range" min="-100" max="100" value="0">
+            <input id="shadow" type="range" min="0" max="100" value="50">
             <div class="range-labels">
-              <span>-100</span>
+              <span>0</span>
               <button data-reset="shadow" type="button">Reset</button>
               <span>100</span>
             </div>
@@ -370,24 +437,24 @@
               <label for="blur">Blur</label>
               <span class="control-value" id="blurValue">0</span>
             </div>
-            <input id="blur" type="range" min="0" max="20" step=".5" value="0">
+            <input id="blur" type="range" min="0" max="100" value="0">
             <div class="range-labels">
               <span>0</span>
               <button data-reset="blur" type="button">Reset</button>
-              <span>20</span>
+              <span>100</span>
             </div>
           </div>
 
           <div class="control-item" id="sharpnessControl" hidden>
             <div class="control-heading">
               <label for="sharpness">Sharpness</label>
-              <span class="control-value" id="sharpnessValue">1.0×</span>
+              <span class="control-value" id="sharpnessValue">20</span>
             </div>
-            <input id="sharpness" type="range" min="0" max="5" step=".1" value="1">
+            <input id="sharpness" type="range" min="0" max="100" value="20">
             <div class="range-labels">
               <span>0</span>
               <button data-reset="sharpness" type="button">Reset</button>
-              <span>5</span>
+              <span>100</span>
             </div>
           </div>
 
@@ -407,9 +474,9 @@
           <div class="control-item" id="temperatureControl" hidden>
             <div class="control-heading">
               <label for="temperature">Temperature</label>
-              <span class="control-value" id="temperatureValue">0</span>
+              <span class="control-value" id="temperatureValue">50</span>
             </div>
-            <input id="temperature" type="range" min="-100" max="100" value="0">
+            <input id="temperature" type="range" min="0" max="100" value="50">
             <div class="range-labels">
               <span>Cool</span>
               <button data-reset="temperature" type="button">Reset</button>
@@ -439,8 +506,6 @@
           </div>
         </div>
 
-        <!-- These four tiles keep the same size and style as other tiles -->
-
         <div class="tool-tile-grid">
 
           <button class="tool-tile" data-transform="cropPanel" type="button">
@@ -465,16 +530,17 @@
 
         </div>
 
-        <!-- CROP -->
-
         <div class="control-list transform-subtools">
+
+          <!-- CROP -->
 
           <div class="control-item" id="cropPanel" hidden>
 
             <h3>Crop Image</h3>
 
             <p class="control-help">
-              Select the image area you want to keep.
+              Click Start Cropping, then drag on the image to select any area.
+              Adjust the crop handles and click Apply Crop.
             </p>
 
             <div class="crop-actions">
@@ -681,14 +747,14 @@
   ];
 
   const defaults = {
-    brightness: 100,
-    contrast: 100,
-    saturation: 100,
-    shadow: 0,
+    brightness: 50,
+    contrast: 50,
+    saturation: 50,
+    shadow: 50,
     blur: 0,
-    sharpness: 1,
+    sharpness: 20,
     vignette: 0,
-    temperature: 0
+    temperature: 50
   };
 
   let selectedFile = null;
@@ -838,7 +904,7 @@
 
   async function refreshPreview() {
 
-    if (!hasImage()) return;
+    if (!hasImage() || cropper) return;
 
     clearTimeout(previewTimer);
 
@@ -854,7 +920,8 @@
         });
 
         if (!response.ok) {
-          throw new Error('Preview processing failed.');
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || 'Preview processing failed.');
         }
 
         const blob = await response.blob();
@@ -889,14 +956,10 @@
       const suffix =
         ['brightness', 'contrast', 'saturation', 'vignette'].includes(id)
           ? '%'
-          : id === 'sharpness'
-            ? '×'
-            : '';
+          : '';
 
       $(id + 'Value').textContent =
-        Number($(id).value).toFixed(
-          id === 'sharpness' || id === 'blur' ? 1 : 0
-        ) + suffix;
+        Number($(id).value).toFixed(0) + suffix;
 
     });
   }
@@ -1031,6 +1094,14 @@
       panel.hidden = true;
     });
 
+    document.querySelectorAll('[data-control]').forEach(button => {
+      button.classList.remove('selected');
+    });
+
+    document.querySelectorAll('#adjustmentControlList .control-item').forEach(panel => {
+      panel.hidden = true;
+    });
+
     history = [];
     historyIndex = -1;
 
@@ -1086,8 +1157,6 @@
   });
 
   // TRANSFORM TOOL SELECTION
-  // Clicking a tile only displays its controls.
-  // It does not change the tile's dimensions.
 
   document.querySelectorAll('[data-transform]').forEach(button => {
 
@@ -1210,20 +1279,31 @@
 
     preview.src = cropSourceUrl;
 
-    cropper = new Cropper(preview, {
-      viewMode: 1,
-      autoCropArea: 0.8,
-      responsive: true,
-      background: false,
-      movable: true,
-      zoomable: false,
-      rotatable: false,
-      scalable: false
-    });
+    preview.onload = () => {
 
-    $('applyCrop').disabled = false;
+      cropper = new Cropper(preview, {
+        viewMode: 1,
+        dragMode: 'crop',
+        autoCropArea: 0.8,
+        responsive: true,
+        background: false,
+        movable: true,
+        zoomable: false,
+        rotatable: false,
+        scalable: false,
+        cropBoxMovable: true,
+        cropBoxResizable: true,
+        toggleDragModeOnDblclick: false,
 
-    setStatus('Select the area you want to crop.');
+        ready() {
+          this.cropper.setDragMode('crop');
+        }
+      });
+
+      $('applyCrop').disabled = false;
+
+      setStatus('Drag on the image to select your crop area.');
+    };
 
   });
 
@@ -1234,10 +1314,10 @@
     const data = cropper.getData(true);
 
     cropData = {
-      x: Math.round(data.x),
-      y: Math.round(data.y),
-      width: Math.round(data.width),
-      height: Math.round(data.height)
+      x: Math.max(0, Math.round(data.x)),
+      y: Math.max(0, Math.round(data.y)),
+      width: Math.max(1, Math.round(data.width)),
+      height: Math.max(1, Math.round(data.height))
     };
 
     cropper.destroy();
@@ -1417,6 +1497,14 @@
     });
 
     document.querySelectorAll('.transform-subtools .control-item').forEach(panel => {
+      panel.hidden = true;
+    });
+
+    document.querySelectorAll('[data-control]').forEach(button => {
+      button.classList.remove('selected');
+    });
+
+    document.querySelectorAll('#adjustmentControlList .control-item').forEach(panel => {
       panel.hidden = true;
     });
 
