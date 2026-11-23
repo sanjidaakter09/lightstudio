@@ -1,5 +1,7 @@
 from io import BytesIO
 import math
+import random
+import re
 
 from flask import (
     Flask,
@@ -11,6 +13,9 @@ from flask import (
 
 from PIL import (
     Image,
+    ImageChops,
+    ImageColor,
+    ImageDraw,
     ImageEnhance,
     ImageFilter,
     ImageOps,
@@ -21,8 +26,11 @@ app = Flask(__name__)
 
 app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024
 
-# Avoid accepting truncated or corrupted images.
+# Reject truncated or corrupted images.
 ImageFile.LOAD_TRUNCATED_IMAGES = False
+
+# Maximum supported image dimensions.
+MAX_DIMENSION = 12000
 
 
 # =========================================================
@@ -35,11 +43,11 @@ def home():
 
 
 # =========================================================
-# INPUT HELPERS
+# SMALL HELPERS
 # =========================================================
 
 def number(name, default, minimum=None, maximum=None):
-    """Safely read a numeric value from the submitted form."""
+    """Safely read numeric form values."""
 
     try:
         value = float(request.form.get(name, default))
@@ -59,79 +67,244 @@ def number(name, default, minimum=None, maximum=None):
 
 
 def flag(name):
-    """Read a boolean value from the submitted form."""
+    """Read boolean form values."""
 
     return request.form.get(name, "false").lower() in {
         "1", "true", "yes", "on"
     }
 
 
-# =========================================================
-# CROP
-# =========================================================
+def longest(image):
+    """Longest side of the image. Used so effects look the same
+    on the small preview and on the full-size download."""
 
-def apply_crop(image):
+    return max(image.size)
 
-    x = int(number("crop_x", 0, 0, image.width))
-    y = int(number("crop_y", 0, 0, image.height))
 
-    width = int(number("crop_width", 0, 0, image.width))
-    height = int(number("crop_height", 0, 0, image.height))
+def table(function):
+    """Build a 256-value lookup table from a function."""
 
-    if width <= 0 or height <= 0:
+    return [
+        max(0, min(255, int(function(i))))
+        for i in range(256)
+    ]
+
+
+def apply_lut(image, function):
+    """Apply one function to every color channel."""
+
+    return image.point(table(function) * len(image.getbands()))
+
+
+def map_channels(image, red=None, green=None, blue=None):
+    """Apply a different function to each color channel."""
+
+    r, g, b = image.split()
+
+    if red:
+        r = r.point(table(red))
+
+    if green:
+        g = g.point(table(green))
+
+    if blue:
+        b = b.point(table(blue))
+
+    return Image.merge("RGB", (r, g, b))
+
+
+def solid(image, color):
+    return Image.new("RGB", image.size, color)
+
+
+def split_tone(image, shadow_color, highlight_color, amount):
+    """Tint dark areas and bright areas with two different colors."""
+
+    gray = ImageOps.grayscale(image)
+    inverse = ImageOps.invert(gray)
+
+    shadows = Image.blend(image, solid(image, shadow_color), amount)
+    highlights = Image.blend(image, solid(image, highlight_color), amount)
+
+    image = Image.composite(shadows, image, inverse)
+    image = Image.composite(highlights, image, gray)
+
+    return image
+
+
+def add_grain(image, amount):
+    """Film grain. amount is 0 to 100."""
+
+    if amount <= 0:
         return image
 
-    right = min(image.width, x + width)
-    bottom = min(image.height, y + height)
+    sigma = 5 + amount / 100 * 55
 
-    if right <= x or bottom <= y:
-        return image
+    noise = Image.effect_noise(image.size, sigma).convert("RGB")
 
-    return image.crop((x, y, right, bottom))
+    return ImageChops.add(image, noise, 1.0, -128)
+
+
+def add_glow(image, amount, radius):
+    """Soft dreamy glow."""
+
+    blurred = image.filter(ImageFilter.GaussianBlur(radius))
+    screened = ImageChops.screen(image, blurred)
+
+    return Image.blend(image, screened, amount)
+
+
+def read_color():
+    """Frame color from the form, always a safe hex color."""
+
+    value = request.form.get("border_color", "#ffffff")
+
+    if not re.fullmatch(r"#[0-9a-fA-F]{6}", value or ""):
+        value = "#ffffff"
+
+    return ImageColor.getrgb(value)
 
 
 # =========================================================
-# ROTATE
+# IMAGE LOADING
 # =========================================================
 
-def apply_rotation(image):
+def load_uploaded_image(upload):
+    """Load uploaded image and normalize orientation and color."""
 
-    rotation = number("rotation", 0, -3600, 3600)
-    rotation = rotation % 360
+    image = Image.open(upload.stream)
 
-    if rotation == 0:
-        return image
+    # Apply EXIF orientation.
+    image = ImageOps.exif_transpose(image)
 
-    return image.rotate(
-        -rotation,
-        expand=True,
-        resample=Image.Resampling.BICUBIC
-    )
+    # Convert to RGB, including transparent image formats.
+    if image.mode in ("RGBA", "LA") or (
+        image.mode == "P" and "transparency" in image.info
+    ):
+        rgba = image.convert("RGBA")
 
+        background = Image.new(
+            "RGBA",
+            rgba.size,
+            (255, 255, 255, 255)
+        )
 
-# =========================================================
-# FLIP
-# =========================================================
+        image = Image.alpha_composite(
+            background,
+            rgba
+        ).convert("RGB")
 
-def apply_flip(image):
+    else:
+        image = image.convert("RGB")
 
-    if flag("flip_horizontal"):
-        image = ImageOps.mirror(image)
+    if image.width <= 0 or image.height <= 0:
+        raise ValueError("Invalid image dimensions.")
 
-    if flag("flip_vertical"):
-        image = ImageOps.flip(image)
+    if image.width > MAX_DIMENSION or image.height > MAX_DIMENSION:
+        raise ValueError("Image dimensions exceed the supported limit.")
 
     return image
 
 
 # =========================================================
-# RESIZE
+# TRANSFORM TOOLS
+# Order: mirror -> rotate 90 -> straighten -> crop -> resize
 # =========================================================
 
-def apply_resize(image):
+def apply_mirror(image):
+    """Mirror left-right (flip tools are built from this + rotation)."""
 
-    width = int(number("resize_width", 0, 0, 12000))
-    height = int(number("resize_height", 0, 0, 12000))
+    if flag("mirror"):
+        return ImageOps.mirror(image)
+
+    return image
+
+
+def apply_rotation(image):
+    """Rotate clockwise in 90-degree steps."""
+
+    rotation = int(number("rotation", 0, -3600, 3600)) % 360
+
+    if rotation == 90:
+        return image.transpose(Image.Transpose.ROTATE_270)
+
+    if rotation == 180:
+        return image.transpose(Image.Transpose.ROTATE_180)
+
+    if rotation == 270:
+        return image.transpose(Image.Transpose.ROTATE_90)
+
+    return image
+
+
+def apply_straighten(image):
+    """Rotate by a small angle and cut away the empty corners."""
+
+    angle = number("straighten", 0, -45, 45)
+
+    if abs(angle) < 0.05:
+        return image
+
+    width, height = image.size
+    radians = math.radians(abs(angle))
+
+    # Largest centered rectangle (same shape) that fits in the rotated image.
+    scale = min(
+        width / (width * math.cos(radians) + height * math.sin(radians)),
+        height / (width * math.sin(radians) + height * math.cos(radians))
+    )
+
+    rotated = image.rotate(
+        -angle,
+        expand=True,
+        resample=Image.Resampling.BICUBIC,
+        fillcolor=(255, 255, 255)
+    )
+
+    new_width = max(1, int(width * scale))
+    new_height = max(1, int(height * scale))
+
+    left = (rotated.width - new_width) // 2
+    top = (rotated.height - new_height) // 2
+
+    return rotated.crop((
+        left,
+        top,
+        left + new_width,
+        top + new_height
+    ))
+
+
+def apply_crop(image):
+    """Crop using fractions (0 to 1) of the current image."""
+
+    crop_w = number("crop_w", 0, 0, 1)
+    crop_h = number("crop_h", 0, 0, 1)
+
+    if crop_w <= 0 or crop_h <= 0:
+        return image
+
+    crop_x = number("crop_x", 0, 0, 1)
+    crop_y = number("crop_y", 0, 0, 1)
+
+    width, height = image.size
+
+    left = int(round(crop_x * width))
+    top = int(round(crop_y * height))
+    right = min(width, int(round((crop_x + crop_w) * width)))
+    bottom = min(height, int(round((crop_y + crop_h) * height)))
+
+    if right - left < 1 or bottom - top < 1:
+        return image
+
+    return image.crop((left, top, right, bottom))
+
+
+def apply_resize(image):
+    """Resize image to requested dimensions."""
+
+    width = int(number("resize_width", 0, 0, MAX_DIMENSION))
+    height = int(number("resize_height", 0, 0, MAX_DIMENSION))
 
     if width <= 0 or height <= 0:
         return image
@@ -145,56 +318,141 @@ def apply_resize(image):
     )
 
 
+def apply_corners(image):
+    """Rounded corners. Corners are filled with the frame color."""
+
+    percent = number("corner_radius", 0, 0, 100)
+
+    if percent <= 0:
+        return image
+
+    width, height = image.size
+    radius = int(min(width, height) / 2 * percent / 100)
+
+    if radius < 1:
+        return image
+
+    # Smooth edges on normal sizes, plain on huge images (speed).
+    ss = 3 if longest(image) <= 2000 else 1
+
+    mask = Image.new("L", (width * ss, height * ss), 0)
+
+    ImageDraw.Draw(mask).rounded_rectangle(
+        (0, 0, width * ss - 1, height * ss - 1),
+        radius=radius * ss,
+        fill=255
+    )
+
+    if ss > 1:
+        mask = mask.resize((width, height), Image.Resampling.LANCZOS)
+
+    background = Image.new("RGB", image.size, read_color())
+
+    return Image.composite(image, background, mask)
+
+
+def apply_border(image):
+    """Add a colored frame around the image."""
+
+    percent = number("border_size", 0, 0, 100)
+
+    pixels = int(longest(image) * 0.12 * percent / 100)
+
+    if pixels < 1:
+        return image
+
+    return ImageOps.expand(image, border=pixels, fill=read_color())
+
+
 # =========================================================
-# BRIGHTNESS
-# Frontend: 0–100
-# Default: 50
+# ADJUSTMENTS
 # =========================================================
+
+def apply_auto_enhance(image):
+
+    if not flag("auto_enhance"):
+        return image
+
+    return ImageOps.autocontrast(image, cutoff=1)
+
 
 def apply_brightness(image):
 
-    brightness = number("brightness", 50, 0, 100)
-
-    factor = brightness / 50
+    factor = number("brightness", 50, 0, 100) / 50
 
     return ImageEnhance.Brightness(image).enhance(factor)
 
 
-# =========================================================
-# CONTRAST
-# Frontend: 0–100
-# Default: 50
-# =========================================================
-
 def apply_contrast(image):
 
-    contrast = number("contrast", 50, 0, 100)
-
-    factor = contrast / 50
+    factor = number("contrast", 50, 0, 100) / 50
 
     return ImageEnhance.Contrast(image).enhance(factor)
 
 
-# =========================================================
-# SATURATION
-# Frontend: 0–100
-# Default: 50
-# =========================================================
-
 def apply_saturation(image):
 
-    saturation = number("saturation", 50, 0, 100)
-
-    factor = saturation / 50
+    factor = number("saturation", 50, 0, 100) / 50
 
     return ImageEnhance.Color(image).enhance(factor)
 
 
-# =========================================================
-# SHADOW
-# Frontend: 0–100
-# Default: 50
-# =========================================================
+def apply_vibrance(image):
+    """Boost weak colors more than strong colors."""
+
+    value = number("vibrance", 50, 0, 100)
+
+    if value == 50:
+        return image
+
+    k = (value - 50) / 50
+
+    hue, sat, val = image.convert("HSV").split()
+
+    if k > 0:
+        sat = sat.point(table(
+            lambda p: p + k * 0.8 * (255 - p) * (1 - p / 255)
+        ))
+    else:
+        sat = sat.point(table(lambda p: p * (1 + k * 0.8)))
+
+    return Image.merge("HSV", (hue, sat, val)).convert("RGB")
+
+
+def apply_hue(image):
+
+    value = number("hue", 0, 0, 100)
+
+    if value <= 0:
+        return image
+
+    shift = int(value / 100 * 256)
+
+    hue, sat, val = image.convert("HSV").split()
+
+    hue = hue.point([(i + shift) % 256 for i in range(256)])
+
+    return Image.merge("HSV", (hue, sat, val)).convert("RGB")
+
+
+def apply_highlights(image):
+    """Below 50 darkens bright areas, above 50 brightens them."""
+
+    value = number("highlights", 50, 0, 100)
+
+    if value == 50:
+        return image
+
+    gray = ImageOps.grayscale(image)
+    mask = gray.point(table(lambda p: 255 * (p / 255) ** 2))
+
+    color = (255, 255, 255) if value > 50 else (0, 0, 0)
+    amount = abs(value - 50) / 50 * 0.5
+
+    toned = Image.blend(image, solid(image, color), amount)
+
+    return Image.composite(toned, image, mask)
+
 
 def apply_shadow(image):
 
@@ -206,47 +464,20 @@ def apply_shadow(image):
     gray = ImageOps.grayscale(image)
 
     shadow_mask = gray.point(
-        lambda p: int(255 * (1 - p / 255) ** 1.5)
+        table(lambda p: 255 * (1 - p / 255) ** 1.5)
     )
 
     if shadow > 50:
-
-        overlay = Image.new(
-            "RGB",
-            image.size,
-            (255, 255, 255)
-        )
-
+        overlay = (255, 255, 255)
         amount = (shadow - 50) / 50 * 0.65
-
     else:
-
-        overlay = Image.new(
-            "RGB",
-            image.size,
-            (0, 0, 0)
-        )
-
+        overlay = (0, 0, 0)
         amount = (50 - shadow) / 50 * 0.65
 
-    blended = Image.blend(
-        image,
-        overlay,
-        amount
-    )
+    blended = Image.blend(image, solid(image, overlay), amount)
 
-    return Image.composite(
-        blended,
-        image,
-        shadow_mask
-    )
+    return Image.composite(blended, image, shadow_mask)
 
-
-# =========================================================
-# TEMPERATURE
-# Frontend: 0–100
-# Default: 50
-# =========================================================
 
 def apply_temperature(image):
 
@@ -257,27 +488,47 @@ def apply_temperature(image):
 
     shift = (temperature - 50) * 0.65
 
-    red, green, blue = image.split()
-
-    red = red.point(
-        lambda p: max(0, min(255, int(p + shift)))
-    )
-
-    blue = blue.point(
-        lambda p: max(0, min(255, int(p - shift)))
-    )
-
-    return Image.merge(
-        "RGB",
-        (red, green, blue)
+    return map_channels(
+        image,
+        red=lambda p: p + shift,
+        blue=lambda p: p - shift
     )
 
 
-# =========================================================
-# BLUR
-# Frontend: 0–100
-# Default: 0
-# =========================================================
+def apply_tint(image):
+    """Green (low) to magenta (high)."""
+
+    value = number("tint", 50, 0, 100)
+
+    if value == 50:
+        return image
+
+    shift = (value - 50) * 0.5
+
+    return map_channels(image, green=lambda p: p - shift)
+
+
+def apply_clarity(image):
+    """Local contrast, makes details pop."""
+
+    value = number("clarity", 0, 0, 100)
+
+    if value <= 0:
+        return image
+
+    return image.filter(ImageFilter.UnsharpMask(
+        radius=max(2, longest(image) / 120),
+        percent=int(value * 1.6),
+        threshold=0
+    ))
+
+
+def apply_sharpness(image):
+
+    factor = number("sharpness", 20, 0, 100) / 20
+
+    return ImageEnhance.Sharpness(image).enhance(factor)
+
 
 def apply_blur(image):
 
@@ -286,35 +537,35 @@ def apply_blur(image):
     if blur <= 0:
         return image
 
-    return image.filter(
-        ImageFilter.GaussianBlur(
-            radius=blur / 5
-        )
-    )
+    # Radius depends on image size, so preview matches download.
+    radius = blur / 100 * 0.02 * longest(image)
+
+    return image.filter(ImageFilter.GaussianBlur(radius=radius))
 
 
-# =========================================================
-# SHARPNESS
-# Frontend: 0–100
-# Default: 20
-# =========================================================
+def apply_glow(image):
 
-def apply_sharpness(image):
+    value = number("glow", 0, 0, 100)
 
-    sharpness = number("sharpness", 20, 0, 100)
+    if value <= 0:
+        return image
 
-    factor = sharpness / 20
-
-    return ImageEnhance.Sharpness(
-        image
-    ).enhance(factor)
+    return add_glow(image, value / 100 * 0.7, longest(image) / 70)
 
 
-# =========================================================
-# VIGNETTE
-# Frontend: 0–100
-# Default: 0
-# =========================================================
+def apply_fade(image):
+    """Lifts the blacks for a matte look."""
+
+    value = number("fade", 0, 0, 100)
+
+    if value <= 0:
+        return image
+
+    lift = value / 100 * 70
+    scale = (255 - lift) / 255
+
+    return apply_lut(image, lambda p: p * scale + lift)
+
 
 def apply_vignette(image):
 
@@ -323,188 +574,323 @@ def apply_vignette(image):
     if vignette <= 0:
         return image
 
-    width, height = image.size
-
-    # Generate the vignette mask at a smaller resolution.
-    scale = min(1, 512 / max(width, height))
-
-    small_width = max(1, int(width * scale))
-    small_height = max(1, int(height * scale))
-
-    mask = Image.new(
-        "L",
-        (small_width, small_height)
-    )
-
-    pixels = mask.load()
-
-    center_x = small_width / 2
-    center_y = small_height / 2
-
-    max_distance = math.sqrt(
-        center_x ** 2 + center_y ** 2
-    )
-
     strength = vignette / 100
 
-    for y in range(small_height):
-
-        for x in range(small_width):
-
-            distance = math.sqrt(
-                (x - center_x) ** 2 +
-                (y - center_y) ** 2
-            ) / max_distance
-
-            edge = max(
-                0,
-                (distance - 0.25) / 0.75
-            )
-
-            pixels[x, y] = int(
-                255 * min(1, edge * strength)
-            )
-
-    mask = mask.resize(
-        (width, height),
+    # Built-in gradient: 0 in the center, 255 at the edges (very fast).
+    mask = Image.radial_gradient("L").resize(
+        image.size,
         Image.Resampling.BILINEAR
     )
 
-    black = Image.new(
-        "RGB",
-        image.size,
-        (0, 0, 0)
-    )
+    mask = mask.point(table(
+        lambda p: 255 * min(
+            1,
+            max(0, (p / 255 - 0.25) / 0.75) * strength
+        )
+    ))
 
-    return Image.composite(
-        black,
-        image,
-        mask
-    )
+    return Image.composite(solid(image, (0, 0, 0)), image, mask)
+
+
+def apply_grain(image):
+
+    return add_grain(image, number("grain", 0, 0, 100))
 
 
 # =========================================================
 # EFFECTS
 # =========================================================
 
-def apply_effect(image, effect):
+def fx_cool(img):
 
-    effect = (effect or "none").lower()
+    return map_channels(
+        img,
+        red=lambda p: p * 0.92,
+        blue=lambda p: p * 1.10
+    )
 
-    if effect == "cool":
 
-        red, green, blue = image.split()
+def fx_sepia(img):
 
-        red = red.point(
-            lambda p: int(p * 0.92)
-        )
+    gray = ImageOps.grayscale(img)
 
-        blue = blue.point(
-            lambda p: min(255, int(p * 1.10))
-        )
+    return ImageOps.colorize(gray, "#3b2418", "#f4dfb5").convert("RGB")
 
-        return Image.merge(
-            "RGB",
-            (red, green, blue)
-        )
 
-    elif effect == "sepia":
+def fx_negative(img):
 
-        gray = ImageOps.grayscale(image)
+    return ImageOps.invert(img)
 
-        return ImageOps.colorize(
-            gray,
-            "#3b2418",
-            "#f4dfb5"
-        ).convert("RGB")
 
-    elif effect == "negative":
+def fx_grayscale(img):
 
-        return ImageOps.invert(image)
+    return ImageOps.grayscale(img).convert("RGB")
 
-    elif effect == "grayscale":
 
-        return ImageOps.grayscale(
-            image
-        ).convert("RGB")
+def fx_blackwhite(img):
 
-    elif effect == "blackwhite":
+    gray = ImageOps.grayscale(img)
 
-        gray = ImageOps.grayscale(image)
+    return gray.point(table(lambda p: 255 if p >= 128 else 0)).convert("RGB")
 
-        gray = gray.point(
-            lambda p: 255 if p >= 128 else 0
-        )
 
-        return gray.convert("RGB")
+def fx_cinematic(img):
 
-    elif effect == "cinematic":
+    img = map_channels(
+        img,
+        red=lambda p: p * 1.04 + 3,
+        blue=lambda p: p * 1.08 + 2
+    )
 
-        red, green, blue = image.split()
+    img = ImageEnhance.Contrast(img).enhance(1.12)
 
-        red = red.point(
-            lambda p: min(255, int(p * 1.04 + 3))
-        )
+    return ImageEnhance.Color(img).enhance(0.85)
 
-        blue = blue.point(
-            lambda p: min(255, int(p * 1.08 + 2))
-        )
 
-        image = Image.merge(
-            "RGB",
-            (red, green, blue)
-        )
+def fx_vintage(img):
 
-        image = ImageEnhance.Contrast(
-            image
-        ).enhance(1.12)
+    gray = ImageOps.grayscale(img)
 
-        return ImageEnhance.Color(
-            image
-        ).enhance(0.85)
+    toned = ImageOps.colorize(gray, "#49352a", "#e8d4a9").convert("RGB")
 
-    elif effect == "vintage":
+    return Image.blend(img, toned, 0.45)
 
-        gray = ImageOps.grayscale(image)
 
-        toned = ImageOps.colorize(
-            gray,
-            "#49352a",
-            "#e8d4a9"
-        ).convert("RGB")
+def fx_retro(img):
 
-        return Image.blend(
-            image,
-            toned,
-            0.45
-        )
+    img = ImageEnhance.Color(img).enhance(1.18)
+    img = ImageEnhance.Contrast(img).enhance(0.92)
 
-    elif effect == "retro":
+    return map_channels(
+        img,
+        red=lambda p: p * 1.05 + 5,
+        blue=lambda p: p * 0.94
+    )
 
-        image = ImageEnhance.Color(
-            image
-        ).enhance(1.18)
 
-        image = ImageEnhance.Contrast(
-            image
-        ).enhance(0.92)
+def fx_tealorange(img):
 
-        red, green, blue = image.split()
+    img = split_tone(img, (0, 110, 130), (255, 150, 60), 0.30)
+    img = ImageEnhance.Contrast(img).enhance(1.12)
 
-        red = red.point(
-            lambda p: min(255, int(p * 1.05 + 5))
-        )
+    return ImageEnhance.Color(img).enhance(1.15)
 
-        blue = blue.point(
-            lambda p: int(p * 0.94)
-        )
 
-        return Image.merge(
-            "RGB",
-            (red, green, blue)
-        )
+def fx_film(img):
 
-    return image
+    img = map_channels(
+        img,
+        red=lambda p: p * 0.96 + 18,
+        green=lambda p: p * 0.92 + 16,
+        blue=lambda p: p * 0.85 + 20
+    )
+
+    img = ImageEnhance.Color(img).enhance(0.9)
+
+    return add_grain(img, 35)
+
+
+def fx_cyberpunk(img):
+
+    img = split_tone(img, (40, 0, 140), (255, 40, 180), 0.35)
+    img = ImageEnhance.Contrast(img).enhance(1.2)
+
+    return ImageEnhance.Color(img).enhance(1.35)
+
+
+def fx_vaporwave(img):
+
+    img = split_tone(img, (90, 30, 160), (255, 150, 210), 0.35)
+    img = apply_lut(img, lambda p: p * 0.9 + 22)
+
+    return ImageEnhance.Color(img).enhance(1.2)
+
+
+def fx_goldenhour(img):
+
+    img = map_channels(
+        img,
+        red=lambda p: p * 1.10 + 8,
+        green=lambda p: p * 1.03,
+        blue=lambda p: p * 0.82
+    )
+
+    img = ImageEnhance.Brightness(img).enhance(1.05)
+
+    return ImageEnhance.Contrast(img).enhance(1.05)
+
+
+def fx_moody(img):
+
+    img = ImageEnhance.Color(img).enhance(0.7)
+    img = ImageEnhance.Contrast(img).enhance(1.15)
+    img = ImageEnhance.Brightness(img).enhance(0.92)
+
+    return split_tone(img, (10, 50, 60), (210, 170, 130), 0.22)
+
+
+def fx_noir(img):
+
+    gray = ImageOps.autocontrast(ImageOps.grayscale(img), cutoff=2)
+
+    return ImageEnhance.Contrast(gray.convert("RGB")).enhance(1.35)
+
+
+def fx_duotone(img):
+
+    gray = ImageOps.grayscale(img)
+
+    return ImageOps.colorize(gray, "#241058", "#ff7ac6").convert("RGB")
+
+
+def fx_matte(img):
+
+    img = apply_lut(img, lambda p: p * (215 / 255) + 40)
+    img = ImageEnhance.Color(img).enhance(0.9)
+
+    return ImageEnhance.Contrast(img).enhance(0.95)
+
+
+def fx_polaroid(img):
+
+    img = map_channels(
+        img,
+        red=lambda p: p * 0.94 + 14,
+        green=lambda p: p * 0.92 + 14,
+        blue=lambda p: p * 0.84 + 20
+    )
+
+    img = ImageEnhance.Color(img).enhance(0.9)
+
+    return ImageEnhance.Contrast(img).enhance(1.05)
+
+
+def fx_dreamy(img):
+
+    img = add_glow(img, 0.6, longest(img) / 60)
+    img = ImageEnhance.Brightness(img).enhance(1.05)
+    img = ImageEnhance.Color(img).enhance(1.1)
+
+    return ImageEnhance.Contrast(img).enhance(0.95)
+
+
+def fx_pixelate(img):
+
+    width, height = img.size
+    block = max(4, int(max(width, height) / 90))
+
+    small = img.resize(
+        (max(1, width // block), max(1, height // block)),
+        Image.Resampling.BILINEAR
+    )
+
+    return small.resize((width, height), Image.Resampling.NEAREST)
+
+
+def fx_posterize(img):
+
+    img = ImageOps.posterize(img, 3)
+
+    return ImageEnhance.Color(img).enhance(1.2)
+
+
+def fx_glitch(img):
+
+    width, height = img.size
+    shift = max(2, int(max(width, height) * 0.012))
+
+    red, green, blue = img.split()
+
+    red = ImageChops.offset(red, -shift, 0)
+    blue = ImageChops.offset(blue, shift, 0)
+
+    img = Image.merge("RGB", (red, green, blue))
+
+    # Fixed seed: preview and download get the same glitch bands.
+    rng = random.Random(42)
+
+    for _ in range(4):
+
+        top = int(rng.random() * height * 0.9)
+        band_height = max(1, int(height * (0.02 + rng.random() * 0.04)))
+        offset = int((rng.random() - 0.5) * width * 0.1)
+
+        band = img.crop((0, top, width, min(height, top + band_height)))
+        band = ImageChops.offset(band, offset, 0)
+
+        img.paste(band, (0, top))
+
+    return img
+
+
+def fx_sketch(img):
+
+    gray = ImageOps.grayscale(img)
+
+    smooth = gray.filter(
+        ImageFilter.GaussianBlur(max(1, longest(img) / 800))
+    )
+
+    edges = smooth.filter(ImageFilter.FIND_EDGES)
+    edges = edges.point(table(lambda p: p * 4))
+
+    sketch = ImageOps.autocontrast(ImageOps.invert(edges), cutoff=2)
+
+    return sketch.convert("RGB")
+
+
+def fx_solarize(img):
+
+    return ImageOps.solarize(img, 128)
+
+
+EFFECTS = {
+    "cool": fx_cool,
+    "sepia": fx_sepia,
+    "negative": fx_negative,
+    "grayscale": fx_grayscale,
+    "blackwhite": fx_blackwhite,
+    "cinematic": fx_cinematic,
+    "vintage": fx_vintage,
+    "retro": fx_retro,
+    "tealorange": fx_tealorange,
+    "film": fx_film,
+    "cyberpunk": fx_cyberpunk,
+    "vaporwave": fx_vaporwave,
+    "goldenhour": fx_goldenhour,
+    "moody": fx_moody,
+    "noir": fx_noir,
+    "duotone": fx_duotone,
+    "matte": fx_matte,
+    "polaroid": fx_polaroid,
+    "dreamy": fx_dreamy,
+    "pixelate": fx_pixelate,
+    "posterize": fx_posterize,
+    "glitch": fx_glitch,
+    "sketch": fx_sketch,
+    "solarize": fx_solarize,
+}
+
+
+def apply_effect(image):
+
+    name = (request.form.get("effect", "none") or "none").lower()
+    function = EFFECTS.get(name)
+
+    if function is None:
+        return image
+
+    strength = number("effect_strength", 100, 0, 100) / 100
+
+    if strength <= 0:
+        return image
+
+    result = function(image).convert("RGB")
+
+    if strength >= 1:
+        return result
+
+    return Image.blend(image, result, strength)
 
 
 # =========================================================
@@ -513,54 +899,46 @@ def apply_effect(image, effect):
 
 def process_image(upload):
 
-    image = Image.open(upload.stream)
+    image = load_uploaded_image(upload)
 
-    # Correct orientation using EXIF metadata.
-    image = ImageOps.exif_transpose(image)
-
-    # Convert to RGB for consistent processing and JPEG output.
-    image = image.convert("RGB")
-
-    # 1. Crop
-    image = apply_crop(image)
-
-    # 2. Rotate
+    # 1. Geometry: mirror, rotate, straighten.
+    image = apply_mirror(image)
     image = apply_rotation(image)
+    image = apply_straighten(image)
 
-    # 3. Flip
-    image = apply_flip(image)
+    # The crop tool asks for the image with geometry only.
+    if flag("geometry_only"):
+        return image
 
-    # 4. Resize
+    # 2. Crop and resize.
+    image = apply_crop(image)
     image = apply_resize(image)
 
-    # 5. Brightness
+    # 3. Adjustments.
+    image = apply_auto_enhance(image)
     image = apply_brightness(image)
-
-    # 6. Contrast
     image = apply_contrast(image)
-
-    # 7. Saturation
     image = apply_saturation(image)
-
-    # 8. Shadow
+    image = apply_vibrance(image)
+    image = apply_hue(image)
+    image = apply_highlights(image)
     image = apply_shadow(image)
-
-    # 9. Temperature
     image = apply_temperature(image)
-
-    # 10. Blur
-    image = apply_blur(image)
-
-    # 11. Sharpness
+    image = apply_tint(image)
+    image = apply_clarity(image)
     image = apply_sharpness(image)
-
-    # 12. Vignette
+    image = apply_blur(image)
+    image = apply_glow(image)
+    image = apply_fade(image)
     image = apply_vignette(image)
+    image = apply_grain(image)
 
-    # 13. Effects
-    effect = request.form.get("effect", "none")
+    # 4. Creative effect.
+    image = apply_effect(image)
 
-    image = apply_effect(image, effect)
+    # 5. Rounded corners and frame (last, so effects don't touch them).
+    image = apply_corners(image)
+    image = apply_border(image)
 
     return image
 
@@ -575,7 +953,6 @@ def create_image_response(image, is_download):
 
     if is_download:
 
-        # Full-resolution output for downloads.
         image.save(
             output,
             format="JPEG",
@@ -585,7 +962,6 @@ def create_image_response(image, is_download):
 
     else:
 
-        # Smaller preview output for faster browser updates.
         preview = image.copy()
 
         preview.thumbnail(
@@ -611,7 +987,7 @@ def create_image_response(image, is_download):
 
 
 # =========================================================
-# PREVIEW AND DOWNLOAD ROUTES
+# PREVIEW ROUTE
 # =========================================================
 
 @app.route("/preview", methods=["POST"])
@@ -634,16 +1010,18 @@ def preview_image():
             is_download=False
         )
 
-    except Exception:
+    except Exception as error:
 
-        app.logger.exception(
-            "Preview processing failed"
-        )
+        app.logger.exception("Preview processing failed")
 
         return jsonify({
-            "error": "The image preview could not be processed."
+            "error": str(error) or "The image preview could not be processed."
         }), 400
 
+
+# =========================================================
+# DOWNLOAD ROUTE
+# =========================================================
 
 @app.route("/download", methods=["POST"])
 def download_image():
@@ -665,19 +1043,17 @@ def download_image():
             is_download=True
         )
 
-    except Exception:
+    except Exception as error:
 
-        app.logger.exception(
-            "Download processing failed"
-        )
+        app.logger.exception("Download processing failed")
 
         return jsonify({
-            "error": "The image could not be downloaded."
+            "error": str(error) or "The image could not be downloaded."
         }), 400
 
 
 # =========================================================
-# FILE SIZE ERROR
+# ERROR HANDLERS
 # =========================================================
 
 @app.errorhandler(413)
@@ -688,16 +1064,10 @@ def file_too_large(error):
     }), 413
 
 
-# =========================================================
-# GENERAL ERROR HANDLER
-# =========================================================
-
 @app.errorhandler(500)
 def internal_server_error(error):
 
-    app.logger.exception(
-        "Internal server error"
-    )
+    app.logger.exception("Internal server error")
 
     return jsonify({
         "error": "An internal server error occurred."

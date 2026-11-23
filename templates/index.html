@@ -6,208 +6,13 @@
   <title>Light Studio | Image Editor</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
-
-  <style>
-    [hidden] { display: none !important; }
-
-    .transform-subtools {
-      display: grid;
-      gap: 12px;
-    }
-
-    .dimension-fields {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin: 12px 0;
-    }
-
-    .dimension-fields input {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #d9ded6;
-      border-radius: 8px;
-    }
-
-    .toggle-line {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin: 10px 0;
-    }
-
-    .crop-actions,
-    .rotate-actions,
-    .flip-actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 12px;
-    }
-
-    .crop-actions .button,
-    .rotate-actions .button,
-    .flip-actions .button {
-      flex: 1;
-    }
-
-    .tool-tile.selected {
-      outline: 2px solid #71834f;
-      background: #eef2e5;
-    }
-
-    .control-help {
-      font-size: 12px;
-      line-height: 1.5;
-      opacity: .75;
-      margin-top: 8px;
-    }
-
-    #resultPreview {
-      max-width: 100%;
-      max-height: 72vh;
-      object-fit: contain;
-      transform-origin: center;
-    }
-
-    .preview-wrap {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
-
-    .status-message {
-      font-size: 13px;
-      margin-top: 10px;
-    }
-
-    .control-item input[type="range"] {
-      width: 100%;
-    }
-
-    .control-item {
-      margin-bottom: 16px;
-    }
-
-    .effect-tile-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .full-width {
-      width: 100%;
-    }
-
-    /* Keep tool tiles consistent when selected */
-    .tool-tile-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-      width: 100%;
-    }
-
-    .tool-tile,
-    .tool-tile.selected {
-      width: 100%;
-      min-width: 0;
-      min-height: 90px;
-      height: 90px;
-      padding: 18px 12px;
-      box-sizing: border-box;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      font-size: 14px;
-      line-height: 1.35;
-      white-space: normal;
-      transform: none !important;
-      scale: none !important;
-    }
-
-    .tool-tile-icon {
-      display: block;
-      font-size: 25px;
-      line-height: 1;
-    }
-
-    #transformCard .tool-tile,
-    #transformCard .tool-tile.selected {
-      min-height: 90px;
-      height: 90px;
-      padding: 18px 12px;
-      transform: none !important;
-    }
-
-    /* Center upload prompt */
-    #uploadPlaceholder {
-      width: 100%;
-      min-height: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      margin: 0 auto;
-    }
-
-    #uploadPlaceholder[hidden] {
-      display: none !important;
-    }
-
-    .upload-stage {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-    }
-
-    /* Cropper display */
-    .cropper-container {
-      max-width: 100%;
-    }
-
-    .cropper-view-box {
-      outline: 2px solid #71834f;
-      outline-color: #71834f;
-    }
-
-    .cropper-line,
-    .cropper-point {
-      background-color: #71834f;
-    }
-
-    .cropper-bg {
-      background-image: none !important;
-    }
-
-    .cropper-container img {
-      max-width: none !important;
-      max-height: none !important;
-    }
-
-    @media (max-width: 700px) {
-      .tool-tile-grid {
-        gap: 10px;
-      }
-
-      .tool-tile,
-      .tool-tile.selected {
-        min-height: 82px;
-        height: 82px;
-        padding: 12px 8px;
-      }
-    }
-  </style>
 </head>
 
 <body>
 
 <div class="app-container">
 
+  <!-- ================= SIDEBAR ================= -->
   <aside class="sidebar">
 
     <div class="brand">
@@ -250,6 +55,7 @@
 
   </aside>
 
+  <!-- ================= MAIN ================= -->
   <main class="main-content">
 
     <header class="topbar">
@@ -261,7 +67,7 @@
       </div>
 
       <div class="topbar-actions">
-        <button class="button button-primary" id="downloadButton" type="button">
+        <button class="button button-primary download-top-button" id="downloadButton" type="button">
           ↓ Download Image
         </button>
       </div>
@@ -272,8 +78,7 @@
 
     <section class="editor-layout" id="editorLayout">
 
-      <!-- IMAGE UPLOAD AND PREVIEW -->
-
+      <!-- ========== PHOTO UPLOAD AND PREVIEW ========== -->
       <section class="image-card upload-card" id="uploadCard">
 
         <div class="image-stage upload-stage" id="uploadDropArea">
@@ -283,15 +88,25 @@
             <h3>Drag and drop an image here</h3>
             <p>or</p>
 
-            <label class="button button-primary" for="imageUpload">
-              Choose Image
-            </label>
+            <label class="button button-primary" for="imageUpload">Choose Image</label>
 
             <span class="file-note">Supports JPG, PNG and WebP</span>
           </div>
 
-          <div class="preview-wrap">
-            <img alt="Image preview" class="preview-image" hidden id="resultPreview">
+          <div class="preview-wrap" id="previewWrap" hidden>
+
+            <img alt="Image preview" hidden id="resultPreview">
+
+            <!-- Crop area (Cropper.js lives here) -->
+            <div id="cropStage" hidden>
+              <div id="cropBox"></div>
+            </div>
+
+            <div id="cropQuickActions" hidden>
+              <button class="button button-primary" id="quickApplyCrop" type="button">Apply Crop</button>
+              <button class="button button-secondary" id="quickCancelCrop" type="button">Cancel</button>
+            </div>
+
           </div>
 
         </div>
@@ -322,8 +137,7 @@
 
       </section>
 
-      <!-- ADJUSTMENTS SECTION -->
-
+      <!-- ========== ADJUSTMENTS ========== -->
       <section class="adjustments-card" id="adjustmentsCard">
 
         <div class="card-header">
@@ -334,198 +148,55 @@
           </div>
         </div>
 
-        <div class="tool-tile-grid" aria-label="Adjustment tools">
+        <!-- Buttons and sliders are created by the ADJUSTMENTS list in the script -->
+        <div class="tool-tile-grid" id="adjustmentTiles" aria-label="Adjustment tools"></div>
 
-          <button class="tool-tile" data-control="brightnessControl" type="button">
-            <span class="tool-tile-icon">☼</span>
-            <span>Brightness</span>
-          </button>
-
-          <button class="tool-tile" data-control="contrastControl" type="button">
-            <span class="tool-tile-icon">◐</span>
-            <span>Contrast</span>
-          </button>
-
-          <button class="tool-tile" data-control="saturationControl" type="button">
-            <span class="tool-tile-icon">◉</span>
-            <span>Saturation</span>
-          </button>
-
-          <button class="tool-tile" data-control="shadowControl" type="button">
-            <span class="tool-tile-icon">◒</span>
-            <span>Shadow</span>
-          </button>
-
-          <button class="tool-tile" data-control="blurControl" type="button">
-            <span class="tool-tile-icon">✧</span>
-            <span>Blur</span>
-          </button>
-
-          <button class="tool-tile" data-control="sharpnessControl" type="button">
-            <span class="tool-tile-icon">✥</span>
-            <span>Sharpness</span>
-          </button>
-
-          <button class="tool-tile" data-control="vignetteControl" type="button">
-            <span class="tool-tile-icon">◉</span>
-            <span>Vignette</span>
-          </button>
-
-          <button class="tool-tile" data-control="temperatureControl" type="button">
-            <span class="tool-tile-icon">♨</span>
-            <span>Temperature</span>
-          </button>
-
-        </div>
-
-        <div class="control-list" id="adjustmentControlList">
-
-          <div class="control-item" id="brightnessControl" hidden>
-            <div class="control-heading">
-              <label for="brightness">Brightness</label>
-              <span class="control-value" id="brightnessValue">50%</span>
-            </div>
-            <input id="brightness" type="range" min="0" max="100" value="50">
-            <div class="range-labels">
-              <span>0</span>
-              <button data-reset="brightness" type="button">Reset</button>
-              <span>100</span>
-            </div>
-          </div>
-
-          <div class="control-item" id="contrastControl" hidden>
-            <div class="control-heading">
-              <label for="contrast">Contrast</label>
-              <span class="control-value" id="contrastValue">50%</span>
-            </div>
-            <input id="contrast" type="range" min="0" max="100" value="50">
-            <div class="range-labels">
-              <span>0</span>
-              <button data-reset="contrast" type="button">Reset</button>
-              <span>100</span>
-            </div>
-          </div>
-
-          <div class="control-item" id="saturationControl" hidden>
-            <div class="control-heading">
-              <label for="saturation">Saturation</label>
-              <span class="control-value" id="saturationValue">50%</span>
-            </div>
-            <input id="saturation" type="range" min="0" max="100" value="50">
-            <div class="range-labels">
-              <span>0</span>
-              <button data-reset="saturation" type="button">Reset</button>
-              <span>100</span>
-            </div>
-          </div>
-
-          <div class="control-item" id="shadowControl" hidden>
-            <div class="control-heading">
-              <label for="shadow">Shadow</label>
-              <span class="control-value" id="shadowValue">50</span>
-            </div>
-            <input id="shadow" type="range" min="0" max="100" value="50">
-            <div class="range-labels">
-              <span>0</span>
-              <button data-reset="shadow" type="button">Reset</button>
-              <span>100</span>
-            </div>
-          </div>
-
-          <div class="control-item" id="blurControl" hidden>
-            <div class="control-heading">
-              <label for="blur">Blur</label>
-              <span class="control-value" id="blurValue">0</span>
-            </div>
-            <input id="blur" type="range" min="0" max="100" value="0">
-            <div class="range-labels">
-              <span>0</span>
-              <button data-reset="blur" type="button">Reset</button>
-              <span>100</span>
-            </div>
-          </div>
-
-          <div class="control-item" id="sharpnessControl" hidden>
-            <div class="control-heading">
-              <label for="sharpness">Sharpness</label>
-              <span class="control-value" id="sharpnessValue">20</span>
-            </div>
-            <input id="sharpness" type="range" min="0" max="100" value="20">
-            <div class="range-labels">
-              <span>0</span>
-              <button data-reset="sharpness" type="button">Reset</button>
-              <span>100</span>
-            </div>
-          </div>
-
-          <div class="control-item" id="vignetteControl" hidden>
-            <div class="control-heading">
-              <label for="vignette">Vignette</label>
-              <span class="control-value" id="vignetteValue">0%</span>
-            </div>
-            <input id="vignette" type="range" min="0" max="100" value="0">
-            <div class="range-labels">
-              <span>0</span>
-              <button data-reset="vignette" type="button">Reset</button>
-              <span>100</span>
-            </div>
-          </div>
-
-          <div class="control-item" id="temperatureControl" hidden>
-            <div class="control-heading">
-              <label for="temperature">Temperature</label>
-              <span class="control-value" id="temperatureValue">50</span>
-            </div>
-            <input id="temperature" type="range" min="0" max="100" value="50">
-            <div class="range-labels">
-              <span>Cool</span>
-              <button data-reset="temperature" type="button">Reset</button>
-              <span>Warm</span>
-            </div>
-          </div>
-
-        </div>
+        <div class="control-list" id="adjustmentControlList"></div>
 
         <div class="adjustments-footer">
-          <button class="button button-secondary full-width" id="resetAdjustments" type="button">
-            Reset Adjustments
-          </button>
+          <div class="footer-row">
+            <button class="button button-secondary" id="autoEnhance" type="button">✨ Auto Enhance</button>
+            <button class="button button-secondary" id="resetAdjustments" type="button">Reset Adjustments</button>
+          </div>
         </div>
 
       </section>
 
-      <!-- TRANSFORM SECTION -->
-
+      <!-- ========== TRANSFORM ========== -->
       <section class="adjustments-card" id="transformCard" hidden>
 
         <div class="card-header">
           <div>
             <span class="card-step">02</span>
             <h2>Transform</h2>
-            <p>Crop, rotate, resize and flip</p>
+            <p>Crop, rotate, resize, flip, frame</p>
           </div>
         </div>
 
         <div class="tool-tile-grid">
 
           <button class="tool-tile" data-transform="cropPanel" type="button">
-            <span class="tool-tile-icon">▣</span>
-            <span>Crop</span>
+            <span class="tool-tile-icon">▣</span><span>Crop</span>
           </button>
 
           <button class="tool-tile" data-transform="rotatePanel" type="button">
-            <span class="tool-tile-icon">⟳</span>
-            <span>Rotate</span>
+            <span class="tool-tile-icon">⟳</span><span>Rotate</span>
           </button>
 
           <button class="tool-tile" data-transform="resizePanel" type="button">
-            <span class="tool-tile-icon">⤢</span>
-            <span>Resize</span>
+            <span class="tool-tile-icon">⤢</span><span>Resize</span>
           </button>
 
           <button class="tool-tile" data-transform="flipPanel" type="button">
-            <span class="tool-tile-icon">↔</span>
-            <span>Flip</span>
+            <span class="tool-tile-icon">↔</span><span>Flip</span>
+          </button>
+
+          <button class="tool-tile" data-transform="borderPanel" type="button">
+            <span class="tool-tile-icon">▢</span><span>Border</span>
+          </button>
+
+          <button class="tool-tile" data-transform="cornersPanel" type="button">
+            <span class="tool-tile-icon">◜</span><span>Corners</span>
           </button>
 
         </div>
@@ -533,70 +204,59 @@
         <div class="control-list transform-subtools">
 
           <!-- CROP -->
-
           <div class="control-item" id="cropPanel" hidden>
-
             <h3>Crop Image</h3>
+            <p class="control-help">Choose a shape, click Start Cropping, drag the handles, then Apply Crop.</p>
 
-            <p class="control-help">
-              Click Start Cropping, then drag on the image to select any area.
-              Adjust the crop handles and click Apply Crop.
-            </p>
-
-            <div class="crop-actions">
-              <button class="button button-secondary" id="startCrop" type="button">
-                Start Cropping
-              </button>
-
-              <button class="button button-primary" id="applyCrop" type="button" disabled>
-                Apply Crop
-              </button>
-
-              <button class="button button-secondary" id="cancelCrop" type="button">
-                Cancel
-              </button>
+            <div class="chip-row" id="ratioChips">
+              <button class="chip selected" data-ratio="free" type="button">Free</button>
+              <button class="chip" data-ratio="1" type="button">1:1</button>
+              <button class="chip" data-ratio="1.3333333" type="button">4:3</button>
+              <button class="chip" data-ratio="0.75" type="button">3:4</button>
+              <button class="chip" data-ratio="1.7777778" type="button">16:9</button>
+              <button class="chip" data-ratio="0.5625" type="button">9:16</button>
             </div>
 
+            <div class="crop-actions">
+              <button class="button button-secondary" id="startCrop" type="button">Start Cropping</button>
+              <button class="button button-primary" id="applyCrop" type="button" disabled>Apply Crop</button>
+              <button class="button button-secondary" id="cancelCrop" type="button">Cancel</button>
+            </div>
           </div>
 
           <!-- ROTATE -->
-
           <div class="control-item" id="rotatePanel" hidden>
-
             <h3>Rotate Image</h3>
 
             <div class="rotate-actions">
-
-              <button class="button button-secondary" id="rotateLeft" type="button">
-                ↶ 90° Left
-              </button>
-
-              <button class="button button-secondary" id="rotateRight" type="button">
-                ↷ 90° Right
-              </button>
-
+              <button class="button button-secondary" id="rotateLeft" type="button">↶ 90° Left</button>
+              <button class="button button-secondary" id="rotateRight" type="button">↷ 90° Right</button>
             </div>
 
+            <div class="sub-slider">
+              <div class="control-heading">
+                <label for="straighten">Straighten</label>
+                <span class="control-value" id="straightenValue">0°</span>
+              </div>
+              <input id="straighten" type="range" min="-45" max="45" step="0.5" value="0">
+              <div class="scale-ticks"><span>-45</span><span>-22</span><span>0</span><span>22</span><span>45</span></div>
+              <div class="range-labels"><button data-reset="straighten" type="button">Reset</button></div>
+            </div>
           </div>
 
           <!-- RESIZE -->
-
           <div class="control-item" id="resizePanel" hidden>
-
             <h3>Resize Image</h3>
 
             <div class="dimension-fields">
-
               <label>
                 Width (px)
                 <input id="resizeWidth" type="number" min="1" max="12000" value="800">
               </label>
-
               <label>
                 Height (px)
                 <input id="resizeHeight" type="number" min="1" max="12000" value="600">
               </label>
-
             </div>
 
             <label class="toggle-line">
@@ -604,90 +264,87 @@
               Maintain aspect ratio
             </label>
 
-            <button class="button button-primary full-width" id="applyResize" type="button">
+            <div class="chip-row">
+              <button class="chip" data-percent="25" type="button">25%</button>
+              <button class="chip" data-percent="50" type="button">50%</button>
+              <button class="chip" data-percent="75" type="button">75%</button>
+              <button class="chip" data-percent="150" type="button">150%</button>
+              <button class="chip" data-percent="200" type="button">200%</button>
+            </div>
+
+            <button class="button button-primary full-width" id="applyResize" type="button" style="margin-top:10px">
               Apply Resize
             </button>
-
           </div>
 
           <!-- FLIP -->
-
           <div class="control-item" id="flipPanel" hidden>
-
             <h3>Flip Image</h3>
-
             <div class="flip-actions">
-
-              <button class="button button-secondary" id="flipHorizontal" type="button">
-                ↔ Flip Horizontal
-              </button>
-
-              <button class="button button-secondary" id="flipVertical" type="button">
-                ↕ Flip Vertical
-              </button>
-
+              <button class="button button-secondary" id="flipHorizontal" type="button">↔ Flip Horizontal</button>
+              <button class="button button-secondary" id="flipVertical" type="button">↕ Flip Vertical</button>
             </div>
+          </div>
 
+          <!-- BORDER -->
+          <div class="control-item" id="borderPanel" hidden>
+            <h3>Border</h3>
+
+            <div class="control-heading">
+              <label for="border_size">Frame size</label>
+              <span class="control-value" id="border_sizeValue">0%</span>
+            </div>
+            <input id="border_size" type="range" min="0" max="100" value="0">
+            <div class="scale-ticks"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
+            <div class="range-labels"><button data-reset="border_size" type="button">Reset</button></div>
+
+            <div class="color-row">
+              <span>Frame color</span>
+              <input id="border_color" type="color" value="#ffffff">
+            </div>
+          </div>
+
+          <!-- CORNERS -->
+          <div class="control-item" id="cornersPanel" hidden>
+            <h3>Rounded Corners</h3>
+
+            <div class="control-heading">
+              <label for="corner_radius">Roundness</label>
+              <span class="control-value" id="corner_radiusValue">0%</span>
+            </div>
+            <input id="corner_radius" type="range" min="0" max="100" value="0">
+            <div class="scale-ticks"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
+            <div class="range-labels"><button data-reset="corner_radius" type="button">Reset</button></div>
+
+            <p class="control-help">Corners are filled with the frame color from the Border tool.</p>
           </div>
 
         </div>
 
       </section>
 
-      <!-- EFFECTS SECTION -->
-
+      <!-- ========== EFFECTS ========== -->
       <section class="adjustments-card effects-card" id="effectsCard" hidden>
 
         <div class="card-header">
           <div>
             <span class="card-step">03</span>
             <h2>Effects</h2>
-            <p>Choose an image effect</p>
+            <p>Trending looks</p>
           </div>
         </div>
 
-        <div class="tool-tile-grid effect-tile-grid">
+        <!-- Effect buttons use the same design as the Adjustment buttons.
+             They are created by the EFFECTS list in the script. -->
+        <div class="tool-tile-grid" id="effectTiles" aria-label="Effects"></div>
 
-          <button class="tool-tile" data-effect="cool" type="button">
-            <span class="tool-tile-icon">❄</span>
-            <span>Cool</span>
-          </button>
-
-          <button class="tool-tile" data-effect="sepia" type="button">
-            <span class="tool-tile-icon">🟤</span>
-            <span>Sepia</span>
-          </button>
-
-          <button class="tool-tile" data-effect="negative" type="button">
-            <span class="tool-tile-icon">◐</span>
-            <span>Negative</span>
-          </button>
-
-          <button class="tool-tile" data-effect="blackwhite" type="button">
-            <span class="tool-tile-icon">◑</span>
-            <span>Black &amp; White</span>
-          </button>
-
-          <button class="tool-tile" data-effect="grayscale" type="button">
-            <span class="tool-tile-icon">◒</span>
-            <span>Grayscale</span>
-          </button>
-
-          <button class="tool-tile" data-effect="cinematic" type="button">
-            <span class="tool-tile-icon">▣</span>
-            <span>Cinematic</span>
-          </button>
-
-          <button class="tool-tile" data-effect="vintage" type="button">
-            <span class="tool-tile-icon">▧</span>
-            <span>Vintage</span>
-          </button>
-
-          <button class="tool-tile" data-effect="retro" type="button">
-            <span class="tool-tile-icon">✦</span>
-            <span>Retro</span>
-          </button>
-
+        <div class="control-item">
+          <div class="control-heading">
+            <label for="effect_strength">Effect strength</label>
+            <span class="control-value" id="effect_strengthValue">100%</span>
+          </div>
+          <input id="effect_strength" type="range" min="0" max="100" value="100">
+          <div class="scale-ticks"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
         </div>
 
         <div class="adjustments-footer">
@@ -698,8 +355,7 @@
 
       </section>
 
-      <!-- ABOUT SECTION -->
-
+      <!-- ========== ABOUT ========== -->
       <section class="about-card" id="aboutCard" hidden>
 
         <div class="card-header">
@@ -731,67 +387,169 @@
 
   const $ = id => document.getElementById(id);
 
+  // =====================================================
+  // TOOL LISTS
+  // To add a new adjustment: add one line here AND a matching
+  // function in app.py. Same for EFFECTS.
+  // =====================================================
+
+  const ADJUSTMENTS = [
+    { id: 'brightness',  label: 'Brightness',  icon: '☼', def: 50, unit: '%' },
+    { id: 'contrast',    label: 'Contrast',    icon: '◐', def: 50, unit: '%' },
+    { id: 'saturation',  label: 'Saturation',  icon: '◉', def: 50, unit: '%' },
+    { id: 'vibrance',    label: 'Vibrance',    icon: '❋', def: 50, unit: '%' },
+    { id: 'highlights',  label: 'Highlights',  icon: '☀', def: 50 },
+    { id: 'shadow',      label: 'Shadow',      icon: '◒', def: 50 },
+    { id: 'temperature', label: 'Temperature', icon: '♨', def: 50, left: 'Cool',  right: 'Warm' },
+    { id: 'tint',        label: 'Tint',        icon: '◍', def: 50, left: 'Green', right: 'Magenta' },
+    { id: 'hue',         label: 'Hue',         icon: '◎', def: 0 },
+    { id: 'clarity',     label: 'Clarity',     icon: '◈', def: 0 },
+    { id: 'sharpness',   label: 'Sharpness',   icon: '✥', def: 20 },
+    { id: 'blur',        label: 'Blur',        icon: '✧', def: 0 },
+    { id: 'glow',        label: 'Glow',        icon: '✺', def: 0 },
+    { id: 'fade',        label: 'Fade',        icon: '▤', def: 0 },
+    { id: 'vignette',    label: 'Vignette',    icon: '●', def: 0, unit: '%' },
+    { id: 'grain',       label: 'Grain',       icon: '∷', def: 0 }
+  ];
+
+  // Trending effects (the id must match a name in app.py)
+  const EFFECTS = [
+    { id: 'tealorange', label: 'Teal & Orange', icon: '◭' },
+    { id: 'cinematic',  label: 'Cinematic',     icon: '▣' },
+    { id: 'retro',      label: 'Retro',         icon: '✦' },
+    { id: 'film',       label: 'Film',          icon: '▥' },
+    { id: 'vintage',    label: 'Vintage',       icon: '▧' },
+    { id: 'moody',      label: 'Moody',         icon: '☁' },
+    { id: 'polaroid',   label: 'Polaroid',      icon: '▢' },
+    { id: 'dreamy',     label: 'Dreamy',        icon: '✺' },
+    { id: 'vaporwave',  label: 'Vaporwave',     icon: '☾' },
+    { id: 'cyberpunk',  label: 'Cyberpunk',     icon: '⚡' },
+    { id: 'goldenhour', label: 'Golden Hour',   icon: '☀' },
+    { id: 'noir',       label: 'Noir',          icon: '◆' }
+  ];
+
+  // Sliders that are written directly in the HTML
+  const EXTRA_RANGES = [
+    { id: 'effect_strength', def: 100, unit: '%' },
+    { id: 'straighten',      def: 0,   unit: '°' },
+    { id: 'border_size',     def: 0,   unit: '%' },
+    { id: 'corner_radius',   def: 0,   unit: '%' }
+  ];
+
+  const RANGES = [...ADJUSTMENTS, ...EXTRA_RANGES];
+
+  const TICKS = '<div class="scale-ticks"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>';
+
+  // =====================================================
+  // BUILD THE ADJUSTMENT AND EFFECT BUTTONS
+  // =====================================================
+
+  ADJUSTMENTS.forEach(a => {
+
+    $('adjustmentTiles').insertAdjacentHTML('beforeend', `
+      <button class="tool-tile" data-control="${a.id}Control" type="button">
+        <span class="tool-tile-icon">${a.icon}</span><span>${a.label}</span>
+      </button>`);
+
+    const bottom = a.left
+      ? `<div class="range-labels between">
+           <span>${a.left}</span>
+           <button data-reset="${a.id}" type="button">Reset</button>
+           <span>${a.right}</span>
+         </div>`
+      : `<div class="range-labels">
+           <button data-reset="${a.id}" type="button">Reset</button>
+         </div>`;
+
+    $('adjustmentControlList').insertAdjacentHTML('beforeend', `
+      <div class="control-item" id="${a.id}Control" hidden>
+        <div class="control-heading">
+          <label for="${a.id}">${a.label}</label>
+          <span class="control-value" id="${a.id}Value"></span>
+        </div>
+        <input id="${a.id}" type="range" min="0" max="100" value="${a.def}">
+        ${TICKS}
+        ${bottom}
+      </div>`);
+  });
+
+  // Effect buttons: exactly the same design as the adjustment buttons
+  EFFECTS.forEach(e => {
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'tool-tile';
+    button.dataset.effect = e.id;
+
+    button.innerHTML = `
+      <span class="tool-tile-icon"></span>
+      <span class="tool-tile-label"></span>`;
+
+    // Set as text so "&" is always safe
+    button.querySelector('.tool-tile-icon').textContent = e.icon;
+    button.querySelector('.tool-tile-label').textContent = e.label;
+
+    $('effectTiles').appendChild(button);
+  });
+
+  // =====================================================
+  // SETTINGS
+  // =====================================================
+
   const imageUpload = $('imageUpload');
   const preview = $('resultPreview');
   const uploadArea = $('uploadDropArea');
 
-  const sliders = [
-    'brightness',
-    'contrast',
-    'saturation',
-    'shadow',
-    'blur',
-    'sharpness',
-    'vignette',
-    'temperature'
-  ];
+  const MAX_SIDE = 12000;
+  const PREVIEW_SIDE = 1000;   // size of the small copy used for live preview
+  const MAX_HISTORY = 60;
 
-  const defaults = {
-    brightness: 50,
-    contrast: 50,
-    saturation: 50,
-    shadow: 50,
-    blur: 0,
-    sharpness: 20,
-    vignette: 0,
-    temperature: 50
-  };
+  // ---------- STATE ----------
+  // Flask applies edits in this order:
+  // mirror -> rotate -> straighten -> crop -> resize -> adjustments
+  // -> effect -> rounded corners -> border
 
-  let selectedFile = null;
-  let cropper = null;
-  let cropData = null;
-  let rotation = 0;
-
-  let flipH = false;
-  let flipV = false;
-  let effect = 'none';
-
-  let previewUrl = null;
-  let previewTimer = null;
-
-  let history = [];
-  let historyIndex = -1;
-  let isRestoring = false;
-
-  let cropSourceUrl = null;
-  let imageRatio = 1;
-
+  let originalFile = null;
+  let originalUrl = null;
+  let originalImg = null;
   let originalWidth = 0;
   let originalHeight = 0;
 
-  // CURRENT EDITING STATE
+  let previewFile = null;    // small copy sent for the live preview
+  let previewScale = 1;      // small copy width / original width
+
+  let cropData = null;       // { x, y, w, h } as fractions (0 to 1) of the current view
+  let rotation = 0;          // 0, 90, 180, 270 (clockwise)
+  let mirrored = false;      // used with rotation to make Flip work in any direction
+  let effect = 'none';
+  let autoEnhance = false;
+  let appliedResize = null;  // { width, height } or null
+  let imageRatio = 1;
+  let cropRatio = NaN;       // NaN = free crop
+
+  let cropper = null;
+  let cropSourceUrl = null;
+  let cropToken = 0;
+
+  let previewUrl = null;
+  let previewTimer = null;
+  let previewToken = 0;
+  let previewAbort = null;
+
+  let history = [];
+  let historyIndex = -1;
+
+  // ---------- HELPERS ----------
 
   const state = () => ({
-    values: Object.fromEntries(
-      sliders.map(id => [id, $(id).value])
-    ),
-
-    crop: cropData ? {...cropData} : null,
+    values: Object.fromEntries(RANGES.map(r => [r.id, $(r.id).value])),
+    crop: cropData ? { ...cropData } : null,
     rotation,
-    flipH,
-    flipV,
+    mirrored,
     effect,
-
+    autoEnhance,
+    borderColor: $('border_color').value,
+    appliedResize: appliedResize ? { ...appliedResize } : null,
     resizeWidth: $('resizeWidth').value,
     resizeHeight: $('resizeHeight').value
   });
@@ -801,10 +559,99 @@
   }
 
   function hasImage() {
-    return !!selectedFile;
+    return !!originalFile;
   }
 
-  // UNDO AND REDO
+  function loadImageElement(url) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('This image could not be opened.'));
+      img.src = url;
+    });
+  }
+
+  function syncEffectTiles() {
+    document.querySelectorAll('[data-effect]').forEach(button => {
+      button.classList.toggle('selected', button.dataset.effect === effect);
+    });
+  }
+
+  function syncAutoButton() {
+    $('autoEnhance').classList.toggle('selected', autoEnhance);
+  }
+
+  function updateValueLabels() {
+    RANGES.forEach(r => {
+      $(r.id + 'Value').textContent = Number($(r.id).value) + (r.unit || '');
+    });
+  }
+
+  // Size after rotate, straighten and crop (before resize)
+  function currentBaseSize() {
+    let w = originalWidth;
+    let h = originalHeight;
+
+    if (rotation === 90 || rotation === 270) [w, h] = [h, w];
+
+    const angle = Math.abs(Number($('straighten').value));
+
+    if (angle > 0.05) {
+      const r = angle * Math.PI / 180;
+      const s = Math.min(
+        w / (w * Math.cos(r) + h * Math.sin(r)),
+        h / (w * Math.sin(r) + h * Math.cos(r))
+      );
+      w = Math.floor(w * s);
+      h = Math.floor(h * s);
+    }
+
+    if (cropData) {
+      w = Math.max(1, Math.round(w * cropData.w));
+      h = Math.max(1, Math.round(h * cropData.h));
+    }
+
+    return [w, h];
+  }
+
+  function updateImageRatio() {
+    const [w, h] = currentBaseSize();
+    if (w && h) imageRatio = w / h;
+  }
+
+  function updateResizeDimensions() {
+    const [w, h] = currentBaseSize();
+    if (!w || !h) return;
+    imageRatio = w / h;
+    $('resizeWidth').value = w;
+    $('resizeHeight').value = h;
+  }
+
+  // ---------- TOOL PANEL HELPERS (one tool is always open) ----------
+
+  function selectControl(id) {
+    document.querySelectorAll('#adjustmentControlList .control-item').forEach(panel => {
+      panel.hidden = panel.id !== id;
+    });
+
+    document.querySelectorAll('[data-control]').forEach(item => {
+      item.classList.toggle('selected', item.dataset.control === id);
+    });
+  }
+
+  function selectTransform(id) {
+    if (id !== 'cropPanel' && cropper) cancelCrop(true);
+
+    document.querySelectorAll('.transform-subtools .control-item').forEach(panel => {
+      panel.hidden = panel.id !== id;
+    });
+
+    document.querySelectorAll('[data-transform]').forEach(item => {
+      item.classList.toggle('selected', item.dataset.transform === id);
+    });
+  }
+
+  // ---------- UNDO / REDO ----------
 
   function updateHistoryButtons() {
     $('undoButton').disabled = historyIndex <= 0;
@@ -812,111 +659,140 @@
   }
 
   function saveHistory() {
+    if (!hasImage()) return;
 
-    if (!hasImage() || isRestoring) return;
-
-    const snapshot = JSON.stringify(state());
-
-    if (history[historyIndex] === snapshot) return;
+    const snap = JSON.stringify(state());
+    if (history[historyIndex] === snap) return;
 
     history = history.slice(0, historyIndex + 1);
+    history.push(snap);
 
-    history.push(snapshot);
-
-    if (history.length > 60) {
-      history.shift();
-    }
+    if (history.length > MAX_HISTORY) history.shift();
 
     historyIndex = history.length - 1;
-
     updateHistoryButtons();
   }
 
   function restoreHistory(index) {
-
     if (index < 0 || index >= history.length) return;
 
-    isRestoring = true;
+    cancelCrop(true);
 
     const s = JSON.parse(history[index]);
 
-    sliders.forEach(id => {
-      $(id).value = s.values[id];
-    });
+    RANGES.forEach(r => { $(r.id).value = s.values[r.id]; });
 
     cropData = s.crop;
     rotation = s.rotation;
-    flipH = s.flipH;
-    flipV = s.flipV;
+    mirrored = s.mirrored;
     effect = s.effect;
+    autoEnhance = s.autoEnhance;
+    appliedResize = s.appliedResize || null;
 
+    $('border_color').value = s.borderColor;
     $('resizeWidth').value = s.resizeWidth || '';
     $('resizeHeight').value = s.resizeHeight || '';
 
     updateImageRatio();
-
-    document.querySelectorAll('[data-effect]').forEach(button => {
-      button.classList.toggle(
-        'selected',
-        button.dataset.effect === effect
-      );
-    });
+    syncEffectTiles();
+    syncAutoButton();
+    updateValueLabels();
 
     historyIndex = index;
-
-    isRestoring = false;
-
     updateHistoryButtons();
-    updateValueLabels();
+
     refreshPreview();
   }
 
-  // SEND IMAGE AND SETTINGS TO FLASK
+  // ---------- SEND IMAGE + SETTINGS TO FLASK ----------
+  // forPreview = true sends the small copy (fast).
+  // forPreview = false sends the full original (used for Download).
 
-  function formData() {
-
+  function formData(forPreview = false) {
     const fd = new FormData();
+    const scale = forPreview ? previewScale : 1;
 
-    fd.append('image', selectedFile);
+    fd.append('image', forPreview ? previewFile : originalFile);
 
-    sliders.forEach(id => {
-      fd.append(id, $(id).value);
-    });
+    RANGES.forEach(r => fd.append(r.id, $(r.id).value));
 
-    fd.append('crop_x', cropData?.x ?? 0);
-    fd.append('crop_y', cropData?.y ?? 0);
-    fd.append('crop_width', cropData?.width ?? 0);
-    fd.append('crop_height', cropData?.height ?? 0);
+    fd.append('crop_x', cropData ? cropData.x : 0);
+    fd.append('crop_y', cropData ? cropData.y : 0);
+    fd.append('crop_w', cropData ? cropData.w : 0);
+    fd.append('crop_h', cropData ? cropData.h : 0);
 
     fd.append('rotation', rotation);
-    fd.append('flip_horizontal', flipH);
-    fd.append('flip_vertical', flipV);
+    fd.append('mirror', mirrored ? 'true' : 'false');
 
-    fd.append('resize_width', $('resizeWidth').value || 0);
-    fd.append('resize_height', $('resizeHeight').value || 0);
+    fd.append('resize_width',
+      appliedResize ? Math.max(1, Math.round(appliedResize.width * scale)) : 0);
+    fd.append('resize_height',
+      appliedResize ? Math.max(1, Math.round(appliedResize.height * scale)) : 0);
 
     fd.append('effect', effect);
+    fd.append('auto_enhance', autoEnhance ? 'true' : 'false');
+    fd.append('border_color', $('border_color').value);
 
     return fd;
   }
 
-  // LIVE IMAGE PREVIEW
+  // Make the small copy used for live preview
+  async function makePreviewCopy(img, file) {
+    const side = Math.max(img.naturalWidth, img.naturalHeight);
+    const s = Math.min(1, PREVIEW_SIDE / side);
 
-  async function refreshPreview() {
+    if (s === 1) return { file, scale: 1 };
 
+    const w = Math.max(1, Math.round(img.naturalWidth * s));
+    const h = Math.max(1, Math.round(img.naturalHeight * s));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';              // transparent PNGs get a white background
+    ctx.fillRect(0, 0, w, h);
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, 0, 0, w, h);
+
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob(
+        b => b ? resolve(b) : reject(new Error('Could not prepare the preview.')),
+        'image/jpeg',
+        0.9
+      );
+    });
+
+    return {
+      file: new File([blob], 'preview.jpg', { type: 'image/jpeg' }),
+      scale: w / img.naturalWidth
+    };
+  }
+
+  // ---------- LIVE PREVIEW ----------
+
+  function refreshPreview() {
     if (!hasImage() || cropper) return;
 
     clearTimeout(previewTimer);
 
     previewTimer = setTimeout(async () => {
 
+      if (!hasImage() || cropper) return;
+
+      // Cancel the previous request that is still running
+      if (previewAbort) previewAbort.abort();
+      previewAbort = new AbortController();
+
+      const token = ++previewToken;
       setStatus('Updating preview…');
 
       try {
-
         const response = await fetch('/preview', {
           method: 'POST',
-          body: formData()
+          body: formData(true),
+          signal: previewAbort.signal
         });
 
         if (!response.ok) {
@@ -926,53 +802,35 @@
 
         const blob = await response.blob();
 
+        if (token !== previewToken || !hasImage() || cropper) return;
+
         const newUrl = URL.createObjectURL(blob);
         const oldUrl = previewUrl;
 
         previewUrl = newUrl;
         preview.src = newUrl;
 
-        if (oldUrl) {
-          URL.revokeObjectURL(oldUrl);
-        }
+        if (oldUrl) URL.revokeObjectURL(oldUrl);
 
         setStatus('Preview updated. Your edits are ready.');
 
       } catch (err) {
-
+        if (err.name === 'AbortError') return;
+        if (token !== previewToken) return;
         setStatus(err.message);
-
       }
 
-    }, 180);
+    }, 150);
   }
 
-  // UPDATE SLIDER VALUES
-
-  function updateValueLabels() {
-
-    sliders.forEach(id => {
-
-      const suffix =
-        ['brightness', 'contrast', 'saturation', 'vignette'].includes(id)
-          ? '%'
-          : '';
-
-      $(id + 'Value').textContent =
-        Number($(id).value).toFixed(0) + suffix;
-
-    });
-  }
-
-  // NAVIGATION
+  // ---------- NAVIGATION ----------
 
   function setWorkspaceView(view) {
 
+    if (view !== 'transform' && cropper) cancelCrop(true);
+
     document.querySelectorAll('.nav-item').forEach(button => {
-      button.classList.toggle(
-        'active',
-        button.dataset.target === view
-      );
+      button.classList.toggle('active', button.dataset.target === view);
     });
 
     $('adjustmentsCard').hidden = view !== 'adjustments';
@@ -991,59 +849,25 @@
         : 'Upload an image and edit it in the workspace.';
   }
 
-  // IMAGE DIMENSIONS AND ASPECT RATIO
+  document.querySelectorAll('.nav-item').forEach(button => {
+    button.addEventListener('click', () => {
+      setWorkspaceView(button.dataset.target);
 
-  function updateImageRatio() {
+      // Open Crop the first time Transform is clicked so the panel is never empty
+      if (button.dataset.target === 'transform' &&
+          !document.querySelector('.transform-subtools .control-item:not([hidden])')) {
+        selectTransform('cropPanel');
+      }
+    });
+  });
 
-    let width = cropData?.width || originalWidth;
-    let height = cropData?.height || originalHeight;
-
-    if (!width || !height) return;
-
-    const normalizedRotation =
-      ((rotation % 360) + 360) % 360;
-
-    if (
-      normalizedRotation === 90 ||
-      normalizedRotation === 270
-    ) {
-      [width, height] = [height, width];
-    }
-
-    imageRatio = width / height || 1;
-  }
-
-  function updateResizeDimensions() {
-
-    let width = cropData?.width || originalWidth;
-    let height = cropData?.height || originalHeight;
-
-    if (!width || !height) return;
-
-    const normalizedRotation =
-      ((rotation % 360) + 360) % 360;
-
-    if (
-      normalizedRotation === 90 ||
-      normalizedRotation === 270
-    ) {
-      [width, height] = [height, width];
-    }
-
-    imageRatio = width / height || 1;
-
-    $('resizeWidth').value = width;
-    $('resizeHeight').value = height;
-  }
-
-  // IMAGE UPLOAD
+  // ---------- IMAGE UPLOAD ----------
 
   imageUpload.addEventListener('change', event => {
     loadImage(event.target.files?.[0]);
   });
 
-  function loadImage(file) {
-
+  async function loadImage(file) {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
@@ -1051,511 +875,520 @@
       return;
     }
 
-    selectedFile = file;
+    cancelCrop(true);
+    clearTimeout(previewTimer);
+    previewToken++;
+
+    const url = URL.createObjectURL(file);
+    let img;
+    let copy;
+
+    try {
+      img = await loadImageElement(url);
+      copy = await makePreviewCopy(img, file);
+    } catch (err) {
+      URL.revokeObjectURL(url);
+      alert(err.message);
+      return;
+    }
+
+    if (originalUrl) URL.revokeObjectURL(originalUrl);
+    if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; }
+
+    originalFile = file;
+    originalUrl = url;
+    originalImg = img;
+    originalWidth = img.naturalWidth;
+    originalHeight = img.naturalHeight;
+
+    previewFile = copy.file;
+    previewScale = copy.scale;
 
     cropData = null;
     rotation = 0;
-    flipH = false;
-    flipV = false;
+    mirrored = false;
     effect = 'none';
+    autoEnhance = false;
+    appliedResize = null;
 
-    if (cropper) {
-      cropper.destroy();
-      cropper = null;
-    }
-
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-    }
-
-    previewUrl = URL.createObjectURL(file);
-
-    preview.src = previewUrl;
+    preview.src = originalUrl;
     preview.hidden = false;
+    $('previewWrap').hidden = false;
 
     $('uploadPlaceholder').hidden = true;
     $('imageActions').hidden = false;
 
-    sliders.forEach(id => {
-      $(id).value = defaults[id];
-    });
+    RANGES.forEach(r => { $(r.id).value = r.def; });
+    $('border_color').value = '#ffffff';
 
     updateValueLabels();
+    updateResizeDimensions();
+    syncEffectTiles();
+    syncAutoButton();
 
-    document.querySelectorAll('[data-effect]').forEach(button => {
-      button.classList.remove('selected');
-    });
-
-    document.querySelectorAll('[data-transform]').forEach(button => {
-      button.classList.remove('selected');
-    });
-
-    document.querySelectorAll('.transform-subtools .control-item').forEach(panel => {
-      panel.hidden = true;
-    });
-
-    document.querySelectorAll('[data-control]').forEach(button => {
-      button.classList.remove('selected');
-    });
-
-    document.querySelectorAll('#adjustmentControlList .control-item').forEach(panel => {
-      panel.hidden = true;
-    });
+    selectControl('brightnessControl');
+    selectTransform('cropPanel');
 
     history = [];
     historyIndex = -1;
+    saveHistory();
 
     setWorkspaceView('adjustments');
-
     setStatus('Image loaded. Start editing.');
-
-    const img = new Image();
-
-    img.onload = () => {
-
-      originalWidth = img.naturalWidth;
-      originalHeight = img.naturalHeight;
-
-      updateResizeDimensions();
-
-      saveHistory();
-
-      URL.revokeObjectURL(img.src);
-    };
-
-    img.src = URL.createObjectURL(file);
   }
 
-  // ADJUSTMENT TOOL SELECTION
-
-  document.querySelectorAll('.nav-item').forEach(button => {
-
-    button.addEventListener('click', () => {
-      setWorkspaceView(button.dataset.target);
-    });
-
-  });
+  // ---------- TOOL SELECTION ----------
 
   document.querySelectorAll('[data-control]').forEach(button => {
-
-    button.addEventListener('click', () => {
-
-      const id = button.dataset.control;
-
-      document.querySelectorAll(
-        '#adjustmentControlList .control-item'
-      ).forEach(panel => {
-        panel.hidden = panel.id !== id;
-      });
-
-      document.querySelectorAll('[data-control]').forEach(item => {
-        item.classList.toggle('selected', item === button);
-      });
-
-    });
-
+    button.addEventListener('click', () => selectControl(button.dataset.control));
   });
-
-  // TRANSFORM TOOL SELECTION
 
   document.querySelectorAll('[data-transform]').forEach(button => {
-
-    button.addEventListener('click', () => {
-
-      const id = button.dataset.transform;
-
-      document.querySelectorAll(
-        '.transform-subtools .control-item'
-      ).forEach(panel => {
-        panel.hidden = panel.id !== id;
-      });
-
-      document.querySelectorAll('[data-transform]').forEach(item => {
-        item.classList.toggle('selected', item === button);
-      });
-
-    });
-
+    button.addEventListener('click', () => selectTransform(button.dataset.transform));
   });
 
-  // ADJUSTMENT SLIDERS
+  // ---------- SLIDERS ----------
 
-  sliders.forEach(id => {
-
-    $(id).addEventListener('input', () => {
+  RANGES.forEach(r => {
+    $(r.id).addEventListener('input', () => {
       updateValueLabels();
+
+      // Straightening changes the image size, so keep the resize boxes in sync
+      if (r.id === 'straighten' && !appliedResize) updateResizeDimensions();
+
       refreshPreview();
     });
 
-    $(id).addEventListener('change', saveHistory);
-
+    $(r.id).addEventListener('change', saveHistory);
   });
 
   document.querySelectorAll('[data-reset]').forEach(button => {
-
     button.addEventListener('click', () => {
-
-      const id = button.dataset.reset;
-
-      $(id).value = defaults[id];
-
+      const r = RANGES.find(item => item.id === button.dataset.reset);
+      $(r.id).value = r.def;
       updateValueLabels();
+
+      if (r.id === 'straighten' && !appliedResize) updateResizeDimensions();
+
       refreshPreview();
       saveHistory();
-
     });
-
   });
 
   $('resetAdjustments').addEventListener('click', () => {
-
-    sliders.forEach(id => {
-      $(id).value = defaults[id];
-    });
-
+    ADJUSTMENTS.forEach(a => { $(a.id).value = a.def; });
+    autoEnhance = false;
+    syncAutoButton();
     updateValueLabels();
     refreshPreview();
     saveHistory();
-
   });
 
-  // EFFECTS
+  $('autoEnhance').addEventListener('click', () => {
+    if (!hasImage()) return;
+    autoEnhance = !autoEnhance;
+    syncAutoButton();
+    refreshPreview();
+    saveHistory();
+  });
+
+  // Frame color
+  $('border_color').addEventListener('input', refreshPreview);
+  $('border_color').addEventListener('change', saveHistory);
+
+  // ---------- EFFECTS ----------
 
   document.querySelectorAll('[data-effect]').forEach(button => {
-
     button.addEventListener('click', () => {
-
-      effect =
-        effect === button.dataset.effect
-          ? 'none'
-          : button.dataset.effect;
-
-      document.querySelectorAll('[data-effect]').forEach(item => {
-        item.classList.toggle(
-          'selected',
-          item.dataset.effect === effect
-        );
-      });
-
+      effect = effect === button.dataset.effect ? 'none' : button.dataset.effect;
+      syncEffectTiles();
       refreshPreview();
       saveHistory();
-
     });
-
   });
 
   $('clearEffect').addEventListener('click', () => {
-
     effect = 'none';
-
-    document.querySelectorAll('[data-effect]').forEach(button => {
-      button.classList.remove('selected');
-    });
-
+    syncEffectTiles();
     refreshPreview();
     saveHistory();
-
   });
 
-  // CROP
+  // ---------- CROP ----------
+  // Flask sends back the image with rotation / flip / straighten already applied.
+  // The crop box is saved as fractions (0 to 1), so there is no pixel math.
 
-  $('startCrop').addEventListener('click', () => {
-
-    if (!hasImage()) {
-      alert('Upload an image first.');
-      return;
-    }
-
+  function closeCropUI() {
     if (cropper) {
       cropper.destroy();
       cropper = null;
     }
-
-    if (cropSourceUrl) {
-      URL.revokeObjectURL(cropSourceUrl);
-    }
-
-    cropSourceUrl = URL.createObjectURL(selectedFile);
-
-    preview.src = cropSourceUrl;
-
-    preview.onload = () => {
-
-      cropper = new Cropper(preview, {
-        viewMode: 1,
-        dragMode: 'crop',
-        autoCropArea: 0.8,
-        responsive: true,
-        background: false,
-        movable: true,
-        zoomable: false,
-        rotatable: false,
-        scalable: false,
-        cropBoxMovable: true,
-        cropBoxResizable: true,
-        toggleDragModeOnDblclick: false,
-
-        ready() {
-          this.cropper.setDragMode('crop');
-        }
-      });
-
-      $('applyCrop').disabled = false;
-
-      setStatus('Drag on the image to select your crop area.');
-    };
-
-  });
-
-  $('applyCrop').addEventListener('click', () => {
-
-    if (!cropper) return;
-
-    const data = cropper.getData(true);
-
-    cropData = {
-      x: Math.max(0, Math.round(data.x)),
-      y: Math.max(0, Math.round(data.y)),
-      width: Math.max(1, Math.round(data.width)),
-      height: Math.max(1, Math.round(data.height))
-    };
-
-    cropper.destroy();
-    cropper = null;
-
-    $('applyCrop').disabled = true;
 
     if (cropSourceUrl) {
       URL.revokeObjectURL(cropSourceUrl);
       cropSourceUrl = null;
     }
 
+    $('cropBox').innerHTML = '';
+    $('cropStage').hidden = true;
+    $('cropQuickActions').hidden = true;
+    $('applyCrop').disabled = true;
+
+    if (hasImage()) preview.hidden = false;
+  }
+
+  function cancelCrop(silent) {
+    const wasCropping = !!cropper || !!cropSourceUrl;
+
+    cropToken++;
+    closeCropUI();
+
+    if (wasCropping) {
+      refreshPreview();
+      if (!silent) setStatus('Crop selection cancelled.');
+    }
+  }
+
+  async function startCrop() {
+    if (!hasImage()) { alert('Upload an image first.'); return; }
+
+    if (cropper || cropSourceUrl) closeCropUI();
+
+    clearTimeout(previewTimer);
+    if (previewAbort) previewAbort.abort();
+    previewToken++;
+
+    const myToken = ++cropToken;
+
+    setStatus('Preparing crop view…');
+
+    try {
+      // Same settings as the preview, but without crop and resize
+      const fd = formData(true);
+      fd.set('crop_w', 0);
+      fd.set('crop_h', 0);
+      fd.set('resize_width', 0);
+      fd.set('resize_height', 0);
+      fd.set('geometry_only', 'true');
+
+      const response = await fetch('/preview', { method: 'POST', body: fd });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Could not prepare the crop view.');
+      }
+
+      const blob = await response.blob();
+
+      if (myToken !== cropToken) return;   // cancelled while preparing
+
+      cropSourceUrl = URL.createObjectURL(blob);
+
+      preview.hidden = true;
+      $('cropStage').hidden = false;
+
+      const box = $('cropBox');
+      box.innerHTML = '';
+
+      const img = document.createElement('img');
+      img.alt = 'Crop image';
+
+      img.onload = () => {
+        img.onload = null;
+
+        if (myToken !== cropToken) return;
+
+        cropper = new Cropper(img, {
+          viewMode: 1,
+          dragMode: 'crop',
+          aspectRatio: cropRatio,
+          autoCropArea: 0.8,
+          responsive: true,
+          background: false,
+          movable: false,
+          zoomable: false,
+          rotatable: false,
+          scalable: false,
+          cropBoxMovable: true,
+          cropBoxResizable: true,
+          toggleDragModeOnDblclick: false,
+          checkOrientation: false
+        });
+
+        $('applyCrop').disabled = false;
+        $('cropQuickActions').hidden = false;
+
+        setStatus('Drag the handles to select your crop area.');
+      };
+
+      box.appendChild(img);
+      img.src = cropSourceUrl;
+
+    } catch (err) {
+      closeCropUI();
+      setStatus(err.message || 'Could not start cropping.');
+    }
+  }
+
+  function applyCrop() {
+    if (!cropper) return;
+
+    const d = cropper.getData();
+    const size = cropper.getImageData();
+    const clamp01 = v => Math.max(0, Math.min(1, v));
+
+    const x = clamp01(d.x / size.naturalWidth);
+    const y = clamp01(d.y / size.naturalHeight);
+    const w = clamp01(d.width / size.naturalWidth);
+    const h = clamp01(d.height / size.naturalHeight);
+
+    // Selecting (almost) everything means no crop
+    cropData = (w > 0.995 && h > 0.995) ? null : { x, y, w: Math.min(w, 1 - x), h: Math.min(h, 1 - y) };
+
+    // A new crop changes the shape, so an old resize no longer fits
+    appliedResize = null;
+
+    cropToken++;
+    closeCropUI();
     updateResizeDimensions();
 
     refreshPreview();
     saveHistory();
 
     setStatus('Crop applied.');
+  }
 
+  document.querySelectorAll('[data-ratio]').forEach(button => {
+    button.addEventListener('click', () => {
+      cropRatio = button.dataset.ratio === 'free' ? NaN : Number(button.dataset.ratio);
+
+      document.querySelectorAll('[data-ratio]').forEach(item => {
+        item.classList.toggle('selected', item === button);
+      });
+
+      if (cropper) cropper.setAspectRatio(cropRatio);
+    });
   });
 
-  $('cancelCrop').addEventListener('click', () => {
+  $('startCrop').addEventListener('click', startCrop);
+  $('applyCrop').addEventListener('click', applyCrop);
+  $('quickApplyCrop').addEventListener('click', applyCrop);
+  $('cancelCrop').addEventListener('click', () => cancelCrop(false));
+  $('quickCancelCrop').addEventListener('click', () => cancelCrop(false));
 
-    if (cropper) {
-      cropper.destroy();
-      cropper = null;
+  // ---------- ROTATE ----------
+  // The crop box turns together with the picture, so a crop is never lost.
+
+  function rotateBy(degrees) {
+    if (!hasImage()) return;
+
+    if (cropper) { setStatus('Apply or cancel the crop first.'); return; }
+
+    rotation = (((rotation + degrees) % 360) + 360) % 360;
+
+    if (cropData) {
+      const c = cropData;
+
+      cropData = degrees > 0
+        ? { x: 1 - c.y - c.h, y: c.x, w: c.h, h: c.w }       // 90° right
+        : { x: c.y, y: 1 - c.x - c.w, w: c.h, h: c.w };      // 90° left
     }
 
-    if (cropSourceUrl) {
-      URL.revokeObjectURL(cropSourceUrl);
-      cropSourceUrl = null;
+    if (appliedResize) {
+      appliedResize = { width: appliedResize.height, height: appliedResize.width };
+      $('resizeWidth').value = appliedResize.width;
+      $('resizeHeight').value = appliedResize.height;
+      updateImageRatio();
+    } else {
+      updateResizeDimensions();
     }
 
-    $('applyCrop').disabled = true;
-
     refreshPreview();
+    saveHistory();
+  }
 
-    setStatus('Crop selection cancelled.');
+  $('rotateLeft').addEventListener('click', () => rotateBy(-90));
+  $('rotateRight').addEventListener('click', () => rotateBy(90));
 
-  });
+  // ---------- FLIP ----------
+  // A flip = mirror + change of rotation. This always flips what you SEE,
+  // even after rotating.
 
-  // ROTATE
+  function flipView(axis) {
+    if (!hasImage()) return;
 
-  $('rotateLeft').addEventListener('click', () => {
+    if (cropper) { setStatus('Apply or cancel the crop first.'); return; }
 
-    rotation -= 90;
+    mirrored = !mirrored;
 
-    updateResizeDimensions();
+    rotation = axis === 'h'
+      ? (360 - rotation) % 360
+      : (540 - rotation) % 360;
+
+    // A flip reverses the direction of the straighten angle
+    $('straighten').value = -Number($('straighten').value);
+    updateValueLabels();
+
+    if (cropData) {
+      cropData = axis === 'h'
+        ? { ...cropData, x: 1 - cropData.x - cropData.w }
+        : { ...cropData, y: 1 - cropData.y - cropData.h };
+    }
 
     refreshPreview();
     saveHistory();
+  }
 
-  });
+  $('flipHorizontal').addEventListener('click', () => flipView('h'));
+  $('flipVertical').addEventListener('click', () => flipView('v'));
 
-  $('rotateRight').addEventListener('click', () => {
-
-    rotation += 90;
-
-    updateResizeDimensions();
-
-    refreshPreview();
-    saveHistory();
-
-  });
-
-  // FLIP
-
-  $('flipHorizontal').addEventListener('click', () => {
-
-    flipH = !flipH;
-
-    $('flipHorizontal').classList.toggle('selected', flipH);
-
-    refreshPreview();
-    saveHistory();
-
-  });
-
-  $('flipVertical').addEventListener('click', () => {
-
-    flipV = !flipV;
-
-    $('flipVertical').classList.toggle('selected', flipV);
-
-    refreshPreview();
-    saveHistory();
-
-  });
-
-  // RESIZE
+  // ---------- RESIZE ----------
 
   $('resizeWidth').addEventListener('input', () => {
-
-    if (
-      $('keepRatio').checked &&
-      $('resizeWidth').value &&
-      imageRatio
-    ) {
+    if ($('keepRatio').checked && $('resizeWidth').value && imageRatio) {
       $('resizeHeight').value = Math.max(
-        1,
-        Math.round(Number($('resizeWidth').value) / imageRatio)
+        1, Math.round(Number($('resizeWidth').value) / imageRatio)
       );
     }
-
   });
 
   $('resizeHeight').addEventListener('input', () => {
-
-    if (
-      $('keepRatio').checked &&
-      $('resizeHeight').value &&
-      imageRatio
-    ) {
+    if ($('keepRatio').checked && $('resizeHeight').value && imageRatio) {
       $('resizeWidth').value = Math.max(
-        1,
-        Math.round(Number($('resizeHeight').value) * imageRatio)
+        1, Math.round(Number($('resizeHeight').value) * imageRatio)
       );
     }
-
   });
 
-  $('applyResize').addEventListener('click', () => {
-
-    if (!hasImage()) {
-      alert('Upload an image first.');
-      return;
+  $('keepRatio').addEventListener('change', () => {
+    if ($('keepRatio').checked && $('resizeWidth').value && imageRatio) {
+      $('resizeHeight').value = Math.max(
+        1, Math.round(Number($('resizeWidth').value) / imageRatio)
+      );
     }
+  });
 
-    const width = Math.max(
-      1,
-      Math.min(12000, Number($('resizeWidth').value) || 1)
-    );
+  function applyResize() {
+    if (!hasImage()) { alert('Upload an image first.'); return; }
+    if (cropper) { setStatus('Apply or cancel the crop first.'); return; }
 
-    const height = Math.max(
-      1,
-      Math.min(12000, Number($('resizeHeight').value) || 1)
-    );
+    const width = Math.max(1, Math.min(MAX_SIDE, Math.round(Number($('resizeWidth').value) || 1)));
+    const height = Math.max(1, Math.min(MAX_SIDE, Math.round(Number($('resizeHeight').value) || 1)));
 
     $('resizeWidth').value = width;
     $('resizeHeight').value = height;
 
+    const [baseW, baseH] = currentBaseSize();
+
+    appliedResize = (width === baseW && height === baseH)
+      ? null
+      : { width, height };
+
     refreshPreview();
     saveHistory();
 
-    setStatus('Image resized.');
+    setStatus(
+      appliedResize
+        ? `Image resized to ${width} × ${height}px.`
+        : 'Resize cleared (same as current size).'
+    );
+  }
 
+  $('applyResize').addEventListener('click', applyResize);
+
+  // 25% / 50% / 75% / 150% / 200% buttons
+  document.querySelectorAll('[data-percent]').forEach(button => {
+    button.addEventListener('click', () => {
+      if (!hasImage()) return;
+
+      const [baseW, baseH] = currentBaseSize();
+      const p = Number(button.dataset.percent) / 100;
+
+      $('resizeWidth').value = Math.max(1, Math.round(baseW * p));
+      $('resizeHeight').value = Math.max(1, Math.round(baseH * p));
+
+      applyResize();
+    });
   });
 
-  // UNDO AND REDO
+  // ---------- UNDO / REDO / RESET / REMOVE ----------
 
-  $('undoButton').addEventListener('click', () => {
-    restoreHistory(historyIndex - 1);
-  });
-
-  $('redoButton').addEventListener('click', () => {
-    restoreHistory(historyIndex + 1);
-  });
-
-  // RESET ALL EDITS
+  $('undoButton').addEventListener('click', () => restoreHistory(historyIndex - 1));
+  $('redoButton').addEventListener('click', () => restoreHistory(historyIndex + 1));
 
   $('resetAllEdits').addEventListener('click', () => {
+    if (!hasImage()) return;
 
-    sliders.forEach(id => {
-      $(id).value = defaults[id];
-    });
+    cancelCrop(true);
+
+    RANGES.forEach(r => { $(r.id).value = r.def; });
+    $('border_color').value = '#ffffff';
 
     cropData = null;
     rotation = 0;
-    flipH = false;
-    flipV = false;
+    mirrored = false;
     effect = 'none';
+    autoEnhance = false;
+    appliedResize = null;
 
     updateResizeDimensions();
-
-    document.querySelectorAll('[data-effect], [data-transform]').forEach(button => {
-      button.classList.remove('selected');
-    });
-
-    document.querySelectorAll('.transform-subtools .control-item').forEach(panel => {
-      panel.hidden = true;
-    });
-
-    document.querySelectorAll('[data-control]').forEach(button => {
-      button.classList.remove('selected');
-    });
-
-    document.querySelectorAll('#adjustmentControlList .control-item').forEach(panel => {
-      panel.hidden = true;
-    });
-
+    syncEffectTiles();
+    syncAutoButton();
     updateValueLabels();
+
+    selectControl('brightnessControl');
+    selectTransform('cropPanel');
 
     refreshPreview();
     saveHistory();
 
     setStatus('All edits reset.');
-
   });
-
-  // REMOVE IMAGE
 
   $('deleteImageButton').addEventListener('click', () => {
 
-    if (cropper) {
-      cropper.destroy();
-      cropper = null;
-    }
+    cancelCrop(true);
+    clearTimeout(previewTimer);
+    if (previewAbort) previewAbort.abort();
+    previewToken++;
 
-    if (cropSourceUrl) {
-      URL.revokeObjectURL(cropSourceUrl);
-      cropSourceUrl = null;
-    }
-
-    selectedFile = null;
+    originalFile = null;
+    originalImg = null;
+    previewFile = null;
+    originalWidth = 0;
+    originalHeight = 0;
     imageUpload.value = '';
 
     preview.removeAttribute('src');
     preview.hidden = true;
+    $('previewWrap').hidden = true;
 
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-    }
-
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
     previewUrl = null;
+
+    if (originalUrl) URL.revokeObjectURL(originalUrl);
+    originalUrl = null;
+
+    cropData = null;
+    rotation = 0;
+    mirrored = false;
+    effect = 'none';
+    autoEnhance = false;
+    appliedResize = null;
+    syncEffectTiles();
+    syncAutoButton();
 
     $('uploadPlaceholder').hidden = false;
     $('imageActions').hidden = true;
 
     history = [];
     historyIndex = -1;
-
     updateHistoryButtons();
 
     setStatus('Choose an image to start editing.');
-
   });
 
-  // DOWNLOAD IMAGE
+  // ---------- DOWNLOAD (full quality, uses the original file) ----------
 
   $('downloadButton').addEventListener('click', async () => {
 
@@ -1572,90 +1405,63 @@
     setStatus('Preparing your edited image…');
 
     try {
-
       const response = await fetch('/download', {
         method: 'POST',
-        body: formData()
+        body: formData(false)
       });
 
       if (!response.ok) {
-
         const data = await response.json().catch(() => ({}));
-
-        throw new Error(
-          data.error || 'Download failed.'
-        );
-
+        throw new Error(data.error || 'Download failed.');
       }
 
       const blob = await response.blob();
-
       const url = URL.createObjectURL(blob);
 
       const link = document.createElement('a');
-
       link.href = url;
       link.download = 'light_studio_edited_image.jpg';
 
       document.body.appendChild(link);
-
       link.click();
       link.remove();
 
-      setTimeout(() => {
-        URL.revokeObjectURL(url);
-      }, 1500);
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
 
       setStatus('Edited image downloaded successfully.');
 
     } catch (err) {
-
       setStatus(err.message);
-
     }
-
   });
 
-  // DRAG AND DROP IMAGE UPLOAD
+  // ---------- DRAG AND DROP ----------
 
   ['dragenter', 'dragover'].forEach(name => {
-
     uploadArea.addEventListener(name, event => {
-
       event.preventDefault();
-
       uploadArea.classList.add('drag-active');
-
     });
-
   });
 
   ['dragleave', 'drop'].forEach(name => {
-
     uploadArea.addEventListener(name, event => {
-
       event.preventDefault();
-
       uploadArea.classList.remove('drag-active');
-
     });
-
   });
 
   uploadArea.addEventListener('drop', event => {
-
     const file = event.dataTransfer.files?.[0];
-
-    if (file) {
-      loadImage(file);
-    }
-
+    if (file) loadImage(file);
   });
 
-  // INITIAL SETUP
+  // ---------- INITIAL SETUP ----------
 
   setWorkspaceView('adjustments');
   updateValueLabels();
+  selectControl('brightnessControl');   // Brightness slider open by default
+  selectTransform('cropPanel');         // Crop panel ready when Transform is opened
 
 })();
 </script>
